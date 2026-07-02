@@ -1,0 +1,18 @@
+[project]
+name = "codex-fragmentum"
+version = "0.1.0"
+description = "Motor cognitivo multi-agente para ficciones interactivas vivas (paso 1 del MVP)."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",      # validación de modelos
+    "networkx>=3.0",      # grafo del memetario (pieza memetario)
+    "fastembed>=0.3",     # embeddings ONNX locales en CPU (pieza embeddings)
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+# Permite importar el paquete `codex` sin instalarlo, corriendo pytest desde la raíz.
+pythonpath = ["."]
+testpaths = ["tests"]

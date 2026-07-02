@@ -1,0 +1,34 @@
+{
+  "ser_id": "pescador_supersticioso",
+  "mana_max": 40,
+  "memes": [
+    {
+      "id": "PF-mar-habla",
+      "tipo": "fundacional",
+      "texto": "El mar guarda señales que hay que saber leer.",
+      "peso_inicial": 9.0,
+      "conexiones": ["avistaje-presagio"]
+    },
+    {
+      "id": "avistaje-presagio",
+      "tipo": "operativo",
+      "texto": "Un avistaje extraño en el agua anuncia tormenta o desgracia.",
+      "peso_inicial": 6.0,
+      "costo": 20
+    },
+    {
+      "id": "historias-puerto",
+      "tipo": "operativo",
+      "texto": "Las viejas historias del puerto suelen decir la verdad.",
+      "peso_inicial": 5.0,
+      "costo": 20
+    },
+    {
+      "id": "ofrenda-mar",
+      "tipo": "experimental",
+      "texto": "Quizás conviene ofrecer algo al mar para calmarlo.",
+      "peso_inicial": 4.0,
+      "costo": 20
+    }
+  ]
+}

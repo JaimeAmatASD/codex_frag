@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Estado de los mundos: se genera en runtime, no se versiona.
+mundos/**/estado.db
+.fastembed_cache/
