@@ -5,7 +5,7 @@ description = "Motor cognitivo multi-agente para ficciones interactivas vivas (p
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",      # validación de modelos
-    "networkx>=3.0",      # grafo del memetario (pieza memetario)
+    "networkx>=3.4",      # grafos: memetario y grafo de información (node-link con edges=)
     "fastembed>=0.3",     # embeddings ONNX locales en CPU (pieza embeddings)
 ]
 

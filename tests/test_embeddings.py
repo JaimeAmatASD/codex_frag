@@ -1,8 +1,9 @@
 """Tests de embeddings. Usan un codificador FALSO determinista: no descargan el
-modelo ni tocan la red (regla 5). El caso de degradación sí prueba el camino real:
-en el venv de tests fastembed no está instalado, así que cargarlo debe fallar limpio."""
+modelo ni tocan la red (regla 5). El caso de degradación simula que fastembed no se
+puede importar (bloqueándolo en sys.modules): no depende de qué haya en el venv."""
 
 import logging
+import sys
 
 import numpy as np
 
@@ -48,10 +49,12 @@ def test_similitud_ordena_por_cercania(tmp_path):
     assert emb.similitud("mar", "oceano") > emb.similitud("mar", "dinero")
 
 
-def test_sin_fastembed_degrada_con_log(tmp_path, caplog):
+def test_sin_fastembed_degrada_con_log(tmp_path, caplog, monkeypatch):
     """Si fastembed no está, no se rompe: devuelve None/0.0 y deja un error en el log."""
+    # None en sys.modules hace fallar el import, esté o no instalado fastembed.
+    monkeypatch.setitem(sys.modules, "fastembed", None)
     p = Persistencia(tmp_path / "mundo")
-    emb = Embeddings(p)  # sin encoder inyectado → intenta cargar fastembed (no instalado)
+    emb = Embeddings(p)  # sin encoder inyectado → intenta cargar fastembed y falla
 
     with caplog.at_level(logging.ERROR):
         assert emb.vector("hola") is None

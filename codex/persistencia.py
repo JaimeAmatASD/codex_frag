@@ -171,6 +171,30 @@ class Persistencia:
                     (momento, ser_id, meme_id),
                 )
 
+    # ----- Grafo de información (paso 2) -----
+    #
+    # El grafo es la única fuente de quién sabe qué (regla 1) y se guarda como
+    # node-link JSON de networkx (ADR-003: formato portable, nunca pickle) en
+    # `grafo.json` dentro de la carpeta del mundo.
+
+    def guardar_grafo(self, grafo: "nx.MultiDiGraph") -> None:
+        """Serializa el grafo de información del mundo. Única escritura del grafo."""
+        import networkx as nx
+
+        datos = nx.node_link_data(grafo, edges="edges")
+        ruta = self.carpeta / "grafo.json"
+        ruta.write_text(json.dumps(datos, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def cargar_grafo(self) -> "nx.MultiDiGraph":
+        """Lee el grafo de información del mundo; vacío si todavía no existe."""
+        import networkx as nx
+
+        ruta = self.carpeta / "grafo.json"
+        if not ruta.exists():
+            return nx.MultiDiGraph()
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        return nx.node_link_graph(datos, edges="edges", multigraph=True, directed=True)
+
     # ----- Caché de embeddings -----
 
     def leer_vector(self, texto_hash: str) -> bytes | None:
