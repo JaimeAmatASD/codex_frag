@@ -18,11 +18,15 @@ en juego real, no antes (por eso son constantes nombradas y los puntajes quedan 
 
 from __future__ import annotations
 
+import logging
 import random
+from pathlib import Path
+from string import Template
 from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from .llm import ClienteLLM, ErrorLLM
 from .modelos import TipoMeme
 from .reglas import (
     AccionDeclarada,
@@ -37,6 +41,28 @@ from .reglas import (
     Posicion,
     Resolucion,
 )
+
+logger = logging.getLogger(__name__)
+
+TEMPLATE_NARRACION = Path(__file__).parent.parent / "templates" / "narracion_score.txt"
+
+# La categoría le llega al LLM como rúbrica EXPLÍCITA: sin esto tiende a narrar
+# éxitos limpios siempre, porque es lo más cómodo de escribir (tiradas.md).
+_RUBRICAS = {
+    CategoriaResultado.LIMPIO: (
+        "Resultado: éxito limpio. Narrá el logro sin costo — igual es un evento: "
+        "algo cambia, algo se abre, el personaje lo siente."
+    ),
+    CategoriaResultado.CON_COSTO: (
+        "Resultado: éxito con costo. Narrá el éxito Y la complicación que llega con "
+        "él (un costo emocional, de relación, de recurso, o una huella que va a "
+        "volver a morder más adelante)."
+    ),
+    CategoriaResultado.MALA_CONSECUENCIA: (
+        "Resultado: mala consecuencia. La acción NO se logra y además hay daño: el "
+        "personaje queda peor que antes y algo del mundo empieza a moverse en contra."
+    ),
+}
 
 # --- Constantes provisionales del cálculo de posición y efecto (tunear jugando) ---
 AFINIDAD_NEUTRA = 0.5          # un meme ni a favor ni en contra de la acción
@@ -182,3 +208,35 @@ class SistemaBlades:
             categoria=categoria,
             efectos=efectos,
         )
+
+
+def narrar_resolucion(cliente: ClienteLLM, resolucion: Resolucion, contexto: ContextoAccion) -> str:
+    """Narra el resultado de la tirada. El motor ya decidió TODO (ADR-001): el LLM
+    recibe la categoría como rúbrica explícita y solo pone la escena. Si el LLM
+    falla, queda la crónica mecánica con log (ADR-005): la tirada ya ocurrió y sus
+    efectos son reales, el Score no se pierde."""
+    ev = resolucion.evaluacion
+    pf = [m for m in contexto.loadout.seleccionados if m.tipo == TipoMeme.FUNDACIONAL]
+    activos = [m for m in contexto.loadout.seleccionados if m.tipo != TipoMeme.FUNDACIONAL]
+    prompt = Template(TEMPLATE_NARRACION.read_text(encoding="utf-8")).substitute(
+        ser_id=ev.accion.ser_id,
+        descripcion=ev.accion.descripcion,
+        posicion=ev.posicion.value,
+        efecto=ev.efecto.value,
+        rubrica=_RUBRICAS[resolucion.categoria],
+        pf="\n".join(f"- {m.texto}" for m in pf) or "- (ninguna)",
+        memes_activos="\n".join(f"- {m.texto}" for m in activos) or "- (ninguno)",
+    )
+    try:
+        narracion = cliente.responder(prompt).strip()
+    except ErrorLLM as e:
+        narracion = ""
+        logger.warning("El LLM falló y el Score queda sin narración literaria: %s", e)
+    if not narracion:
+        # La crónica mínima: qué se intentó y qué salió, en palabras del mundo.
+        categoria = resolucion.categoria.value.replace("_", " ")
+        return (
+            f"{ev.accion.ser_id} intenta: {ev.accion.descripcion} "
+            f"(posición {ev.posicion.value}, efecto {ev.efecto.value}) — {categoria}."
+        )
+    return narracion

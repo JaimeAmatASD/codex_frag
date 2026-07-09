@@ -1,10 +1,14 @@
 """Tests del enchufe Blades: posición/efecto desde el cristal, tiradas con tres
-resultados, regla del cero, empuje pagando stress, y la mala consecuencia que
-avanza el clock de amenaza. Deterministas: afinidades dadas y dados guionados."""
+resultados, regla del cero, empuje pagando stress, la mala consecuencia que
+avanza el clock de amenaza, y la narración del resultado (el LLM narra lo que el
+motor decidió). Deterministas: afinidades dadas, dados guionados, MockClient."""
+
+import logging
 
 import pytest
 
-from codex.blades import HojaMecanica, SistemaBlades
+from codex.blades import HojaMecanica, SistemaBlades, narrar_resolucion
+from codex.llm import ErrorLLM, MockClient
 from codex.loadout import Loadout
 from codex.modelos import MemeVivo, TipoMeme
 from codex.reglas import (
@@ -178,3 +182,40 @@ def test_no_se_puede_empujar_sin_stress_disponible():
     ev = blades.evaluar(ACCION, ctx)
     with pytest.raises(ValueError):
         blades.tirar(ev, ctx, empuje=Empuje.DADO_EXTRA)
+
+
+def test_la_narracion_recibe_la_categoria_explicita():
+    """El LLM no decide el resultado: lo recibe como rúbrica explícita (sin eso,
+    tiende a narrar éxitos limpios siempre). La narración es prosa, sin validar
+    contra esquema: el motor ya dispuso todo lo que importa."""
+    blades = _blades(dados=(4, 2))
+    ctx = _contexto(CRISTAL_NEUTRO)
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+    cliente = MockClient(respuestas=["Logra zarpar, pero el patrón ya no lo mira igual."])
+
+    narracion = narrar_resolucion(cliente, r, ctx)
+
+    assert narracion == "Logra zarpar, pero el patrón ya no lo mira igual."
+    prompt = cliente.llamadas[0]
+    assert "éxito con costo" in prompt          # la categoría, explícita
+    assert "arriesgada" in prompt               # los términos de la tirada
+    assert ACCION.descripcion in prompt         # lo que el jugador declaró
+    assert "PF-mar" in prompt                   # el cristal del ser tiñe la narración
+
+
+def test_sin_llm_el_resultado_queda_dicho_igual(caplog):
+    """ADR-005: si el LLM falla, el Score no se pierde — queda la crónica mecánica
+    del resultado, con log. La tirada ya ocurrió y sus efectos son reales."""
+    blades = _blades(dados=(2, 1))
+    ctx = _contexto(CRISTAL_NEUTRO)
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+
+    class ClienteCaido:
+        def responder(self, prompt):
+            raise ErrorLLM("429")
+
+    with caplog.at_level(logging.WARNING):
+        narracion = narrar_resolucion(ClienteCaido(), r, ctx)
+
+    assert "mala consecuencia" in narracion     # la crónica mínima dice qué pasó
+    assert any("narración" in m.message.lower() for m in caplog.records)
