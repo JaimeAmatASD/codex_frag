@@ -16,6 +16,12 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+# Centinela para `distancia_raiz` cuando los embeddings están caídos y la distancia
+# no se puede medir. Nunca se inventa un 1.0 (sería un dato falso permanente en el
+# grafo): el centinela es trazable y, como el contenido queda guardado, la distancia
+# real se puede recalcular después.
+DISTANCIA_NO_MEDIDA = -1.0
+
 
 class Hecho(BaseModel):
     """La verdad raíz: algo que objetivamente ocurrió en el mundo,
@@ -39,6 +45,7 @@ class Version(BaseModel):
     receptor: str | None = None        # None en la raíz.
     momento: str                       # hora del mundo en que nació esta versión.
     distancia_raiz: float              # 1 - similitud coseno con la raíz; 0.0 en la raíz.
+                                       # DISTANCIA_NO_MEDIDA si no se pudo medir.
 
 
 class RespuestaMutacion(BaseModel):

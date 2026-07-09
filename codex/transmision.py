@@ -28,7 +28,7 @@ from pydantic import ValidationError
 
 from .embeddings import Embeddings
 from .grafo_mundo import GrafoMundo
-from .hechos import RespuestaMutacion, Version
+from .hechos import DISTANCIA_NO_MEDIDA, RespuestaMutacion, Version
 from .llm import ClienteLLM
 from .loadout import Loadout, calcular_loadout
 from .memetario import Memetario
@@ -129,6 +129,19 @@ def transmitir(
         )
 
     raiz = grafo.version_raiz(version.hecho_id)
+    # `similitud` primero: recién después de intentar calcularla `disponible` es confiable.
+    similitud = embeddings.similitud(respuesta.contenido_entendido, raiz.contenido)
+    if embeddings.disponible:
+        distancia = 1.0 - similitud
+    else:
+        # Sin embeddings la similitud vale 0.0 y la distancia daría 1.0: un dato falso
+        # que quedaría en el grafo para siempre. Se marca con el centinela (regla 3).
+        distancia = DISTANCIA_NO_MEDIDA
+        logger.warning(
+            "Sin embeddings: la distancia a la raíz de esta versión queda sin medir "
+            "(centinela %s); se puede recalcular después desde el contenido.",
+            DISTANCIA_NO_MEDIDA,
+        )
     momento = reloj.ahora().isoformat()
     nueva = Version(
         id=f"v-{uuid.uuid4().hex[:12]}",
@@ -138,7 +151,7 @@ def transmitir(
         emisor=emisor_id,
         receptor=receptor.ser.ser_id,
         momento=momento,
-        distancia_raiz=1.0 - embeddings.similitud(respuesta.contenido_entendido, raiz.contenido),
+        distancia_raiz=distancia,
     )
     grafo.registrar_version(nueva)
 

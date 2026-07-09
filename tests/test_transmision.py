@@ -8,6 +8,7 @@ queda en el grafo con linaje y distancia, activaciones con regla 4), el degradad
 
 import json
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -15,7 +16,7 @@ import numpy as np
 
 from codex.embeddings import Embeddings
 from codex.grafo_mundo import GrafoMundo
-from codex.hechos import Hecho
+from codex.hechos import DISTANCIA_NO_MEDIDA, Hecho
 from codex.llm import MockClient
 from codex.memetario import Memetario
 from codex.modelos import Ser
@@ -48,9 +49,9 @@ def _encoder(textos):
     return [np.asarray(VECTORES.get(t, [0.5, 0.5]), dtype=np.float32) for t in textos]
 
 
-def _preparar(tmp_path):
+def _preparar(tmp_path, encoder=_encoder):
     p = Persistencia(tmp_path / "mundo")
-    emb = Embeddings(p, encoder=_encoder)
+    emb = Embeddings(p, encoder=encoder)
     grafo = GrafoMundo(p)
     raiz = grafo.registrar_hecho(HECHO)
     ser = Ser(**json.loads((SERES_DIR / "pescador_supersticioso.json").read_text(encoding="utf-8")))
@@ -141,6 +142,26 @@ def test_ids_con_corchetes_del_template_se_normalizan(tmp_path):
 
     estado = p.leer_estado("pescador_supersticioso")
     assert estado["avistaje-presagio"].veces_movilizado == 1
+
+
+def test_sin_embeddings_la_distancia_queda_como_centinela(tmp_path, caplog, monkeypatch):
+    """Si los embeddings están caídos, la distancia NO se inventa (1.0 sería un dato
+    falso permanente en el grafo): queda el centinela, trazable y recalculable después."""
+    monkeypatch.setitem(sys.modules, "fastembed", None)  # fuerza la indisponibilidad
+    p, emb, grafo, raiz, pescador, reloj = _preparar(tmp_path, encoder=None)
+    cliente = MockClient(respuestas=[_respuesta_valida()])
+
+    with caplog.at_level(logging.WARNING):
+        nueva = transmitir("un_testigo", pescador, raiz, grafo, emb, cliente, reloj)
+
+    # La transmisión sigue funcionando: la versión entra al grafo con su linaje.
+    assert nueva.contenido == ENTENDIDO
+    assert grafo.linaje(nueva.id) == [raiz, nueva]
+
+    # Pero la distancia queda marcada como no medida, también en el grafo persistido.
+    assert nueva.distancia_raiz == DISTANCIA_NO_MEDIDA
+    assert grafo.version(nueva.id).distancia_raiz == DISTANCIA_NO_MEDIDA
+    assert any("distancia" in r.message.lower() for r in caplog.records)
 
 
 def test_memes_resonantes_fuera_del_loadout_se_descartan(tmp_path, caplog):

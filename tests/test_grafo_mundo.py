@@ -105,6 +105,10 @@ def test_registros_invalidos_se_rechazan(tmp_path):
         grafo.registrar_version(_version_derivada(raiz, hecho_id="no-existe"))
     with pytest.raises(ValueError):        # conocimiento de una versión inexistente
         grafo.registrar_conocimiento("alguien", "no-existe")
+    with pytest.raises(ValueError):        # consulta de una versión inexistente
+        grafo.version("no-existe")
+    with pytest.raises(ValueError):        # raíz de un hecho inexistente
+        grafo.version_raiz("no-existe")
 
     grafo.registrar_version(_version_derivada(raiz))
     with pytest.raises(ValueError):        # versión duplicada

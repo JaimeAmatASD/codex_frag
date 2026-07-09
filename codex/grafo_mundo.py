@@ -85,9 +85,9 @@ class GrafoMundo:
 
     def version(self, version_id: str) -> Version:
         """Reconstruye una Version validada desde su nodo."""
-        datos = self._g.nodes[version_id]
-        if datos.get("tipo") != "version":
+        if not self._g.has_node(version_id) or self._g.nodes[version_id].get("tipo") != "version":
             raise ValueError(f"No existe la versión: {version_id}")
+        datos = self._g.nodes[version_id]
         return Version(id=version_id, **{k: v for k, v in datos.items() if k != "tipo"})
 
     def version_raiz(self, hecho_id: str) -> Version:
