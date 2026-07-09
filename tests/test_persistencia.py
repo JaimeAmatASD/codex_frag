@@ -91,6 +91,34 @@ def test_actualizar_pesos(tmp_path):
     assert p.leer_estado("pescador")["presagio"].peso == 4.2
 
 
+def test_hoja_de_reglas_es_semilla_junto_al_ser(tmp_path):
+    """La hoja mecánica vive en la carpeta del ser, separada del cuerpo cognitivo
+    (ADR-007: pertenece a la capa de reglas y no viaja con el alma). El núcleo la
+    entrega cruda: el sistema de reglas la valida con SU modelo (ADR-002)."""
+    p = _mundo(tmp_path)
+    assert p.cargar_hoja_reglas("pescador") is None    # sin hoja = no juega Scores
+
+    carpeta = p.carpeta_seres / "pescador"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / "hoja_reglas.json").write_text(
+        json.dumps({"ser_id": "pescador", "acciones": {"faenar": 2}}), encoding="utf-8"
+    )
+    assert p.cargar_hoja_reglas("pescador") == {"ser_id": "pescador", "acciones": {"faenar": 2}}
+
+
+def test_estado_de_reglas_clave_valor(tmp_path):
+    """El estado vivo del sistema de reglas (p. ej. stress) va a SQLite (regla 1),
+    como clave-valor genérico: el núcleo no conoce los conceptos de Blades."""
+    p = _mundo(tmp_path)
+    assert p.leer_estado_reglas("pescador") == {}
+
+    p.guardar_estado_reglas("pescador", {"stress": 2.0})
+    p.guardar_estado_reglas("pescador", {"stress": 4.0, "vida": 3.0})  # actualiza y agrega
+
+    assert p.leer_estado_reglas("pescador") == {"stress": 4.0, "vida": 3.0}
+    assert p.leer_estado_reglas("otro") == {}
+
+
 def test_cache_embeddings(tmp_path):
     p = _mundo(tmp_path)
 

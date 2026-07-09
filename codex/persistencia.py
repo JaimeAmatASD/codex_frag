@@ -17,6 +17,7 @@ import logging
 import sqlite3
 from pathlib import Path
 
+from .clocks import Clock
 from .modelos import EstadoMeme, Ser
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,25 @@ class Persistencia:
                 CREATE TABLE IF NOT EXISTS embeddings_cache (
                     texto_hash TEXT PRIMARY KEY,
                     vector     BLOB NOT NULL
+                );
+
+                -- Estado vivo del sistema de reglas (paso 3), clave-valor genérico:
+                -- el núcleo persiste sin conocer los conceptos del enchufe (ADR-002).
+                CREATE TABLE IF NOT EXISTS reglas_estado (
+                    ser_id TEXT NOT NULL,
+                    clave  TEXT NOT NULL,
+                    valor  REAL NOT NULL,
+                    PRIMARY KEY (ser_id, clave)
+                );
+
+                -- Clocks de progreso (paso 3): la presión narrativa del mundo.
+                -- Los completados se conservan: son memoria del mundo.
+                CREATE TABLE IF NOT EXISTS clocks (
+                    id                 TEXT PRIMARY KEY,
+                    nombre             TEXT NOT NULL,
+                    segmentos_total    INTEGER NOT NULL,
+                    segmentos_actuales INTEGER NOT NULL,
+                    estado             TEXT NOT NULL
                 );
                 """
             )
@@ -202,6 +222,52 @@ class Persistencia:
             return nx.MultiDiGraph()
         datos = json.loads(ruta.read_text(encoding="utf-8"))
         return nx.node_link_graph(datos, edges="edges", multigraph=True, directed=True)
+
+    # ----- Capa de reglas (paso 3): semilla y estado vivo, genéricos -----
+
+    def cargar_hoja_reglas(self, ser_id: str) -> dict | None:
+        """Lee la hoja mecánica del ser desde `seres/<ser_id>/hoja_reglas.json`.
+        Es semilla de la capa de reglas, separada del cuerpo cognitivo (ADR-007);
+        se entrega cruda porque la valida el sistema de reglas con su propio modelo.
+        None si no existe: un ser sin hoja no participa de Scores."""
+        ruta = self.carpeta_seres / ser_id / "hoja_reglas.json"
+        if not ruta.exists():
+            return None
+        return json.loads(ruta.read_text(encoding="utf-8"))
+
+    def leer_estado_reglas(self, ser_id: str) -> dict[str, float]:
+        """El estado vivo del sistema de reglas para un ser (p. ej. stress actual)."""
+        filas = self._conn.execute(
+            "SELECT clave, valor FROM reglas_estado WHERE ser_id = ?", (ser_id,)
+        ).fetchall()
+        return {f["clave"]: f["valor"] for f in filas}
+
+    def guardar_estado_reglas(self, ser_id: str, valores: dict[str, float]) -> None:
+        """Crea o actualiza claves del estado de reglas (no borra las que no vienen)."""
+        with self._conn:
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO reglas_estado (ser_id, clave, valor) VALUES (?, ?, ?)",
+                [(ser_id, clave, valor) for clave, valor in valores.items()],
+            )
+
+    # ----- Clocks (paso 3) -----
+
+    def guardar_clock(self, clock: Clock) -> None:
+        """Crea o actualiza un clock (la puerta única también para la presión narrativa)."""
+        with self._conn:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO clocks "
+                "(id, nombre, segmentos_total, segmentos_actuales, estado) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (clock.id, clock.nombre, clock.segmentos_total,
+                 clock.segmentos_actuales, clock.estado),
+            )
+
+    def cargar_clock(self, clock_id: str) -> Clock | None:
+        fila = self._conn.execute(
+            "SELECT * FROM clocks WHERE id = ?", (clock_id,)
+        ).fetchone()
+        return Clock(**dict(fila)) if fila else None
 
     # ----- Caché de embeddings -----
 
