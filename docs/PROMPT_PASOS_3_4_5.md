@@ -12,6 +12,8 @@
 
 **Alcance.** Tiradas con tres resultados; posición y efecto calculados desde el memetario (los memes activos afines a la acción mejoran, las PF en conflicto empeoran); stress como recurso simple (empujar la tirada pagando stress); UN clock de amenaza que avanza con las malas consecuencias. Consultar el skill codex-fragmentum-blades (referencias de tiradas y clocks) para el detalle mecánico, recordando que su sección de estatus fue corregida: enchufable, no columna.
 
+**Restricción del ADR-007.** La hoja mecánica del ser (stress, stats, lo que el sistema de reglas necesite persistir) se guarda en archivo separado del cuerpo cognitivo, dentro de la carpeta del ser: pertenece a la capa de reglas y no viajará con el alma cuando exista el enchufe de seres.
+
 **No es del paso 3.** Trauma inyectado al memetario (fase posterior: requiere hitos), vicios, downtime completo, múltiples clocks, free play estructurado. Tests con dados sembrados (random con seed) y MockClient para la narración.
 
 ---
@@ -21,6 +23,8 @@
 **Objetivo.** Que los seres tengan fondo además de cristal: cada ser puede referenciar un corpus (texto destilado curado por James) con sus tres dimensiones (profundidad, fidelidad ya materializada en el contenido, postura), y ese fondo entra al prompt cuando el ser habla o recuenta, cambiando su voz.
 
 **El documento que manda.** docs/CORPUS_DISENO.md tiene el diseño completo y las decisiones cerradas: entidad de primera clase referenciada (no poseída), acceso por interpretación del LLM (las dimensiones como contexto, no dosificación mecánica), el LLM no inventa contenido del corpus que no está escrito, implementación liviana (campos de texto), RAG explícitamente diferido, evolución explícitamente diferida.
+
+**Restricción del ADR-007 (si no se hizo antes).** Migrar cada ser a su propia carpeta autocontenida dentro del mundo (seres/marcos/ser.json), con su corpus al lado (seres/marcos/corpus.md). El estado vivo sigue únicamente en el SQLite del mundo (regla 1): la carpeta del ser es semilla, no runtime.
 
 **Alcance.** Modelo Pydantic de Corpus y de la referencia ser→corpus con dimensiones; carga desde JSON en la carpeta del mundo (mismo patrón semilla que los seres); integración al armado de prompts de transmisión y narración (el fondo del ser entra como contexto junto al cristal). La prueba: el mismo rumor recontado por el mismo cristal CON y SIN corpus debería sonar distinto; y dos seres con el mismo corpus pero distinta postura (venera / desconfía) deberían citarlo distinto.
 
