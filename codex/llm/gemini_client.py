@@ -17,6 +17,8 @@ import os
 import urllib.error
 import urllib.request
 
+from .mock_client import ErrorLLM
+
 logger = logging.getLogger(__name__)
 
 # Alias que Google mantiene apuntando al Flash vigente: los modelos con versión fija
@@ -54,8 +56,10 @@ class GeminiClient:
         except urllib.error.HTTPError as e:
             # El cuerpo del error dice el porqué (modelo retirado, key inválida, cuota);
             # urllib lo esconde y sin esto el diagnóstico es a ciegas (regla 3).
-            logger.error("Error HTTP %s de Gemini: %s", e.code, e.read().decode("utf-8", "replace"))
-            raise
+            cuerpo = e.read().decode("utf-8", "replace")
+            logger.error("Error HTTP %s de Gemini: %s", e.code, cuerpo)
+            # Se traduce a ErrorLLM (la interfaz): la transmisión degrada, no crashea.
+            raise ErrorLLM(f"Gemini devolvió HTTP {e.code}: {cuerpo[:200]}") from e
 
         try:
             partes = datos["candidates"][0]["content"]["parts"]

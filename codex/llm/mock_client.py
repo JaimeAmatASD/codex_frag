@@ -19,6 +19,13 @@ class ClienteLLM(Protocol):
     def responder(self, prompt: str) -> str: ...
 
 
+class ErrorLLM(Exception):
+    """Fallo de infraestructura del LLM (cuota agotada, red caída, modelo retirado).
+
+    Es parte de la interfaz: cada cliente traduce sus errores propios a este, así el
+    motor puede degradar (ADR-005) sin conocer urllib ni el SDK de ningún proveedor."""
+
+
 class MockClient:
     """Cliente LLM determinista para tests y para tener el enchufe listo."""
 

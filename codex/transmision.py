@@ -29,7 +29,7 @@ from pydantic import ValidationError
 from .embeddings import Embeddings
 from .grafo_mundo import GrafoMundo
 from .hechos import DISTANCIA_NO_MEDIDA, RespuestaMutacion, Version
-from .llm import ClienteLLM
+from .llm import ClienteLLM, ErrorLLM
 from .loadout import Loadout, calcular_loadout
 from .memetario import Memetario
 from .modelos import TipoMeme
@@ -72,7 +72,13 @@ def _pedir_mutacion(cliente: ClienteLLM, prompt: str) -> RespuestaMutacion | Non
     suele corregir si sabe qué falló). Devuelve None si ambos intentos fallan."""
     actual = prompt
     for intento in range(1, INTENTOS + 1):
-        cruda = cliente.responder(actual)
+        try:
+            cruda = cliente.responder(actual)
+        except ErrorLLM as e:
+            # Fallo de infraestructura (cuota, red): no es culpa del contenido, así
+            # que el reintento con feedback no ayuda. Se degrada ya (ADR-005).
+            logger.warning("El LLM falló por infraestructura, no se reintenta: %s", e)
+            return None
         try:
             return _parsear_respuesta(cruda)
         except (ValueError, ValidationError) as e:

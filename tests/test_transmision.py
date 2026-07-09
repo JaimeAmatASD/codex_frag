@@ -17,7 +17,7 @@ import numpy as np
 from codex.embeddings import Embeddings
 from codex.grafo_mundo import GrafoMundo
 from codex.hechos import DISTANCIA_NO_MEDIDA, Hecho
-from codex.llm import MockClient
+from codex.llm import ErrorLLM, MockClient
 from codex.memetario import Memetario
 from codex.modelos import Ser
 from codex.persistencia import Persistencia
@@ -162,6 +162,30 @@ def test_sin_embeddings_la_distancia_queda_como_centinela(tmp_path, caplog, monk
     assert nueva.distancia_raiz == DISTANCIA_NO_MEDIDA
     assert grafo.version(nueva.id).distancia_raiz == DISTANCIA_NO_MEDIDA
     assert any("distancia" in r.message.lower() for r in caplog.records)
+
+
+def test_error_de_infraestructura_del_llm_degrada_sin_reintento(tmp_path, caplog):
+    """Si el LLM falla por infraestructura (cuota agotada, red caída), la transmisión
+    degrada a "sin deformación" igual que ante una respuesta inválida — pero SIN
+    reintento: el error no es del contenido y el feedback no lo arregla."""
+    p, emb, grafo, raiz, pescador, reloj = _preparar(tmp_path)
+
+    class ClienteCaido:
+        def __init__(self):
+            self.llamadas = 0
+
+        def responder(self, prompt: str) -> str:
+            self.llamadas += 1
+            raise ErrorLLM("429: cuota agotada")
+
+    cliente = ClienteCaido()
+    with caplog.at_level(logging.WARNING):
+        nueva = transmitir("un_testigo", pescador, raiz, grafo, emb, cliente, reloj)
+
+    assert nueva.contenido == raiz.contenido      # el receptor guarda lo que oyó tal cual
+    assert grafo.linaje(nueva.id) == [raiz, nueva]
+    assert cliente.llamadas == 1                  # sin reintento
+    assert any("sin deformación" in r.message for r in caplog.records)
 
 
 def test_memes_resonantes_fuera_del_loadout_se_descartan(tmp_path, caplog):
