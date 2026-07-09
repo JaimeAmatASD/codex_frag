@@ -1,0 +1,10 @@
+{
+  "ser_id": "comerciante_esceptico",
+  "stress_max": 9,
+  "acciones": {
+    "regatear": 3,
+    "tasar": 2,
+    "persuadir": 2,
+    "pelear": 0
+  }
+}

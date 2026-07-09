@@ -1,0 +1,10 @@
+{
+  "ser_id": "pescador_supersticioso",
+  "stress_max": 9,
+  "acciones": {
+    "faenar": 3,
+    "leer_las_aguas": 2,
+    "persuadir": 1,
+    "pelear": 1
+  }
+}
