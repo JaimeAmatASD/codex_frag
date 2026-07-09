@@ -34,9 +34,8 @@ def _preparar_mundo() -> Path:
     """Copia los seres a una carpeta temporal limpia y devuelve su ruta."""
     origen = RAIZ / "mundos" / "prueba" / "seres"
     work = Path(tempfile.mkdtemp(prefix="codex_demo_"))
-    (work / "seres").mkdir()
-    for json_ser in origen.glob("*.json"):
-        shutil.copy(json_ser, work / "seres" / json_ser.name)
+    # Cada ser es una carpeta autocontenida (ADR-007): se copia el árbol entero.
+    shutil.copytree(origen, work / "seres")
     return work
 
 

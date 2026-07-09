@@ -54,7 +54,7 @@ def _preparar(tmp_path, encoder=_encoder):
     emb = Embeddings(p, encoder=encoder)
     grafo = GrafoMundo(p)
     raiz = grafo.registrar_hecho(HECHO)
-    ser = Ser(**json.loads((SERES_DIR / "pescador_supersticioso.json").read_text(encoding="utf-8")))
+    ser = Ser(**json.loads((SERES_DIR / "pescador_supersticioso" / "ser.json").read_text(encoding="utf-8")))
     pescador = Memetario(ser, p)
     reloj = RelojSimple(datetime(1850, 3, 1, 8, 0))
     return p, emb, grafo, raiz, pescador, reloj

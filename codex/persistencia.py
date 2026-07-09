@@ -76,8 +76,10 @@ class Persistencia:
     # ----- Definiciones de seres (JSON, solo lectura) -----
 
     def cargar_ser(self, ser_id: str) -> Ser:
-        """Lee y valida la definición de un ser desde `seres/<ser_id>.json`."""
-        ruta = self.carpeta_seres / f"{ser_id}.json"
+        """Lee y valida la definición de un ser desde su carpeta autocontenida,
+        `seres/<ser_id>/ser.json` (ADR-007: el ser es un paquete; su semilla vive
+        junta y separada del estado vivo, que sigue solo en SQLite)."""
+        ruta = self.carpeta_seres / ser_id / "ser.json"
         if not ruta.exists():
             raise FileNotFoundError(f"No existe la definición del ser: {ruta}")
         datos = json.loads(ruta.read_text(encoding="utf-8"))

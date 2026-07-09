@@ -61,8 +61,8 @@ def test_conexion_a_meme_inexistente_loguea_y_no_rompe(tmp_path, caplog):
 
 def test_cargar_desde_json(tmp_path):
     p = Persistencia(tmp_path / "mundo")
-    p.carpeta_seres.mkdir(parents=True, exist_ok=True)
-    (p.carpeta_seres / "pescador.json").write_text(json.dumps(SER_EJEMPLO), encoding="utf-8")
+    (p.carpeta_seres / "pescador").mkdir(parents=True, exist_ok=True)
+    (p.carpeta_seres / "pescador" / "ser.json").write_text(json.dumps(SER_EJEMPLO), encoding="utf-8")
 
     m = Memetario.cargar("pescador", p)
 

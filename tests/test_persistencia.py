@@ -19,10 +19,16 @@ def _mundo(tmp_path) -> Persistencia:
     return Persistencia(tmp_path / "mundo")
 
 
+def _sembrar_json(p, ser_id, datos):
+    """Escribe la semilla de un ser en su carpeta autocontenida (ADR-007)."""
+    carpeta = p.carpeta_seres / ser_id
+    carpeta.mkdir(parents=True, exist_ok=True)
+    (carpeta / "ser.json").write_text(json.dumps(datos), encoding="utf-8")
+
+
 def test_cargar_ser_desde_json(tmp_path):
     p = _mundo(tmp_path)
-    p.carpeta_seres.mkdir(parents=True, exist_ok=True)
-    (p.carpeta_seres / "pescador.json").write_text(json.dumps(SER_EJEMPLO), encoding="utf-8")
+    _sembrar_json(p, "pescador", SER_EJEMPLO)
 
     ser = p.cargar_ser("pescador")
 
@@ -36,10 +42,8 @@ def test_origen_de_un_ser_cargado(tmp_path):
     lo completa con el id del mundo que lo contiene; si lo trae (un ser enchufado
     desde otro mundo), se respeta."""
     p = _mundo(tmp_path)
-    p.carpeta_seres.mkdir(parents=True, exist_ok=True)
-    (p.carpeta_seres / "pescador.json").write_text(json.dumps(SER_EJEMPLO), encoding="utf-8")
-    viajero = {**SER_EJEMPLO, "ser_id": "viajero", "origen": "cala_norte"}
-    (p.carpeta_seres / "viajero.json").write_text(json.dumps(viajero), encoding="utf-8")
+    _sembrar_json(p, "pescador", SER_EJEMPLO)
+    _sembrar_json(p, "viajero", {**SER_EJEMPLO, "ser_id": "viajero", "origen": "cala_norte"})
 
     assert p.cargar_ser("pescador").origen == "mundo"
     assert p.cargar_ser("viajero").origen == "cala_norte"

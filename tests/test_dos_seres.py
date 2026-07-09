@@ -34,7 +34,7 @@ VECTORES = {
 
 
 def _cargar_ser(nombre: str) -> Ser:
-    return Ser(**json.loads((SERES_DIR / f"{nombre}.json").read_text(encoding="utf-8")))
+    return Ser(**json.loads((SERES_DIR / nombre / "ser.json").read_text(encoding="utf-8")))
 
 
 def test_dos_seres_misma_noticia_distinto_loadout(tmp_path):
