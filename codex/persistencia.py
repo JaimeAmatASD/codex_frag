@@ -29,6 +29,9 @@ class Persistencia:
         self.carpeta = Path(carpeta_mundo)
         self.carpeta_seres = self.carpeta / "seres"
         self.db_path = self.carpeta / "estado.db"
+        # El nombre de la carpeta ES el id del mundo (ADR-007): es el `origen` default
+        # de toda entidad nativa. El id compuesto (mundo:entidad) no se usa acá dentro.
+        self.mundo_id = self.carpeta.name
 
         self.carpeta.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self.db_path)
@@ -78,7 +81,10 @@ class Persistencia:
         if not ruta.exists():
             raise FileNotFoundError(f"No existe la definición del ser: {ruta}")
         datos = json.loads(ruta.read_text(encoding="utf-8"))
-        return Ser(**datos)
+        ser = Ser(**datos)
+        if not ser.origen:                 # nativo: su origen es este mundo (ADR-007)
+            ser.origen = self.mundo_id
+        return ser
 
     # ----- Siembra del estado vivo -----
 

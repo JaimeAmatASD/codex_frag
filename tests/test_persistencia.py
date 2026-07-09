@@ -31,6 +31,20 @@ def test_cargar_ser_desde_json(tmp_path):
     assert ser.memes[0].id == "PF-mar"
 
 
+def test_origen_de_un_ser_cargado(tmp_path):
+    """ADR-007: todo ser lleva `origen`. Si su JSON no lo trae, la puerta de carga
+    lo completa con el id del mundo que lo contiene; si lo trae (un ser enchufado
+    desde otro mundo), se respeta."""
+    p = _mundo(tmp_path)
+    p.carpeta_seres.mkdir(parents=True, exist_ok=True)
+    (p.carpeta_seres / "pescador.json").write_text(json.dumps(SER_EJEMPLO), encoding="utf-8")
+    viajero = {**SER_EJEMPLO, "ser_id": "viajero", "origen": "cala_norte"}
+    (p.carpeta_seres / "viajero.json").write_text(json.dumps(viajero), encoding="utf-8")
+
+    assert p.cargar_ser("pescador").origen == "mundo"
+    assert p.cargar_ser("viajero").origen == "cala_norte"
+
+
 def test_sembrar_es_idempotente(tmp_path):
     p = _mundo(tmp_path)
     ser = Ser(**SER_EJEMPLO)

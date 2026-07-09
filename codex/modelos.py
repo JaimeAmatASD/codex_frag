@@ -46,6 +46,9 @@ class Ser(BaseModel):
     ser_id: str
     mana_max: int
     memes: list[Meme]
+    # De qué mundo o paquete proviene (ADR-007: el contenido es enchufable). Vacío =
+    # nativo: la puerta de carga lo completa con el id del mundo que lo contiene.
+    origen: str = ""
 
 
 class EstadoMeme(BaseModel):

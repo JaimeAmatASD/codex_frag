@@ -31,6 +31,9 @@ class Hecho(BaseModel):
     contenido: str
     momento: str   # hora del MUNDO en ISO (viene del RelojDelMundo, nunca datetime.now()).
     lugar: str     # string simple; el sistema de lugares llega en pasos posteriores.
+    # De qué mundo o paquete proviene (ADR-007: el contenido es enchufable). Vacío =
+    # nativo: la puerta de registro lo completa con el id del mundo que lo contiene.
+    origen: str = ""
 
 
 class Version(BaseModel):

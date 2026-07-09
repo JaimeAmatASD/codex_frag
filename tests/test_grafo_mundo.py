@@ -91,6 +91,22 @@ def test_el_grafo_sobrevive_a_recargar_el_mundo(tmp_path):
     assert recargado.versiones_conocidas("pescador_supersticioso") == [v1]
 
 
+def test_origen_de_un_hecho_registrado(tmp_path):
+    """ADR-007: todo hecho lleva `origen`. Si no lo trae, el registro lo completa
+    con el id del mundo que lo contiene; si lo trae (lore importado), se respeta.
+    Y sobrevive a recargar el mundo, como todo lo del grafo."""
+    grafo = GrafoMundo(Persistencia(tmp_path / "mundo"))
+    grafo.registrar_hecho(HECHO)
+    forastero = HECHO.model_copy(update={"id": "hecho-forastero", "origen": "cala_norte"})
+    grafo.registrar_hecho(forastero)
+
+    recargado = GrafoMundo(Persistencia(tmp_path / "mundo"))
+    assert recargado.hecho(HECHO.id).origen == "mundo"
+    assert recargado.hecho("hecho-forastero").origen == "cala_norte"
+    with pytest.raises(ValueError):        # consulta de un hecho inexistente
+        recargado.hecho("no-existe")
+
+
 def test_registros_invalidos_se_rechazan(tmp_path):
     grafo = GrafoMundo(Persistencia(tmp_path / "mundo"))
     raiz = grafo.registrar_hecho(HECHO)

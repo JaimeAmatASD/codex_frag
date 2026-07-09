@@ -40,6 +40,8 @@ class GrafoMundo:
         Devuelve la raíz, que es lo que un testigo puede conocer y transmitir."""
         if self._g.has_node(hecho.id):
             raise ValueError(f"El hecho ya existe en el grafo: {hecho.id}")
+        if not hecho.origen:               # nativo: su origen es este mundo (ADR-007)
+            hecho = hecho.model_copy(update={"origen": self.persistencia.mundo_id})
 
         raiz = Version(
             id=f"{hecho.id}-raiz",
@@ -82,6 +84,13 @@ class GrafoMundo:
             self.persistencia.guardar_grafo(self._g)
 
     # ----- Consultas -----
+
+    def hecho(self, hecho_id: str) -> Hecho:
+        """Reconstruye un Hecho validado desde su nodo."""
+        if not self._g.has_node(hecho_id) or self._g.nodes[hecho_id].get("tipo") != "hecho":
+            raise ValueError(f"No existe el hecho: {hecho_id}")
+        datos = self._g.nodes[hecho_id]
+        return Hecho(id=hecho_id, **{k: v for k, v in datos.items() if k != "tipo"})
 
     def version(self, version_id: str) -> Version:
         """Reconstruye una Version validada desde su nodo."""
