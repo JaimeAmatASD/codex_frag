@@ -60,6 +60,11 @@ class GeminiClient:
             logger.error("Error HTTP %s de Gemini: %s", e.code, cuerpo)
             # Se traduce a ErrorLLM (la interfaz): la transmisión degrada, no crashea.
             raise ErrorLLM(f"Gemini devolvió HTTP {e.code}: {cuerpo[:200]}") from e
+        except (urllib.error.URLError, TimeoutError) as e:
+            # Respuesta que nunca llega (timeout del socket, red caída): la espera ya
+            # quedó acotada por TIMEOUT_SEGUNDOS; también degrada, no cuelga ni crashea.
+            logger.error("Sin respuesta de Gemini (red o timeout): %s", e)
+            raise ErrorLLM(f"Sin respuesta de Gemini: {e}") from e
 
         try:
             partes = datos["candidates"][0]["content"]["parts"]
