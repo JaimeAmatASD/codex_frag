@@ -264,7 +264,10 @@ function botonHablar(texto) {
   return `<button class="mic" onclick="hablar(PARA_HABLAR[${PARA_HABLAR.length - 1}])">▶</button>`;
 }
 function esc(texto) {
-  return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Escapa TODO dato del mundo antes de entrar al HTML, también dentro de
+  // atributos value="..." (una comilla en un meme no puede romper la página).
+  return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /* ---------- mundo ---------- */
@@ -299,12 +302,12 @@ function filaMeme(m = {}) {
   const div = document.createElement('div');
   div.className = 'meme-fila';
   div.innerHTML = `
-    <input placeholder="id" class="m-id" value="${m.id || ''}">
+    <input placeholder="id" class="m-id" value="${esc(m.id || '')}">
     <select class="m-tipo">
       ${['fundacional','operativo','experimental'].map(t =>
         `<option ${m.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
     </select>
-    <input placeholder="texto del meme" class="m-texto" style="flex:3" value="${m.texto || ''}">
+    <input placeholder="texto del meme" class="m-texto" style="flex:3" value="${esc(m.texto || '')}">
     <input placeholder="peso" class="m-peso" type="number" step="0.5" style="max-width:5rem" value="${m.peso_inicial ?? 5}">
     <input placeholder="costo" class="m-costo" type="number" style="max-width:5rem" value="${m.costo ?? 20}">
     <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
@@ -315,7 +318,7 @@ function filaAccion(nombre = '', rango = 1) {
   const div = document.createElement('div');
   div.className = 'accion-fila';
   div.innerHTML = `
-    <input placeholder="acción (p. ej. persuadir)" class="a-nombre" value="${nombre}">
+    <input placeholder="acción (p. ej. persuadir)" class="a-nombre" value="${esc(nombre)}">
     <input type="number" min="0" max="4" class="a-rango" style="max-width:5rem" value="${rango}">
     <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
   return div;
@@ -327,16 +330,16 @@ async function cargarSeres() {
   window.SERES = seres;
   $('#listaSeres').innerHTML = seres.length ? '' : 'Todavía no hay seres en este mundo.';
   for (const ser of seres) {
-    const estado = await api('GET', `/seres/${ser.ser_id}/estado`);
+    const estado = await api('GET', `/seres/${encodeURIComponent(ser.ser_id)}/estado`);
     const filas = Object.entries(estado).map(([id, e]) =>
-      `<tr><td>${id}</td><td>${e.peso.toFixed(1)}</td><td>${e.veces_en_loadout}</td>
+      `<tr><td>${esc(id)}</td><td>${e.peso.toFixed(1)}</td><td>${e.veces_en_loadout}</td>
        <td>${e.veces_movilizado}</td></tr>`).join('');
     $('#listaSeres').insertAdjacentHTML('beforeend', `
       <div style="margin:.6rem 0; padding:.6rem; border:1px solid var(--borde); border-radius:8px;">
-        <b>${ser.ser_id}</b> <span class="chip">origen: ${ser.origen}</span>
+        <b>${esc(ser.ser_id)}</b> <span class="chip">origen: ${esc(ser.origen)}</span>
         <span class="chip">mana: ${ser.mana_max}</span>
-        ${ser.hoja ? `<span class="chip">hoja: ${Object.entries(ser.hoja.acciones).map(([a,r])=>a+' '+r).join(' · ')}</span>` : '<span class="chip">sin hoja</span>'}
-        <button class="suave" onclick='editarSer(${JSON.stringify(ser.ser_id)})'>editar</button>
+        ${ser.hoja ? `<span class="chip">hoja: ${esc(Object.entries(ser.hoja.acciones).map(([a,r])=>a+' '+r).join(' · '))}</span>` : '<span class="chip">sin hoja</span>'}
+        <button class="suave" data-ser="${esc(ser.ser_id)}" onclick="editarSer(this.dataset.ser)">editar</button>
         <details><summary class="tenue">el cristal, viviendo (pesos y activaciones)</summary>
           <table><tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}</table>
         </details>
@@ -345,7 +348,7 @@ async function cargarSeres() {
   const ids = seres.map(s => s.ser_id);
   document.getElementById('listaIdsSeres')?.remove();
   document.body.insertAdjacentHTML('beforeend',
-    `<datalist id="listaIdsSeres">${ids.map(i => `<option>${i}</option>`).join('')}</datalist>`);
+    `<datalist id="listaIdsSeres">${ids.map(i => `<option>${esc(i)}</option>`).join('')}</datalist>`);
 }
 function editarSer(serId) {
   const ser = window.SERES.find(s => s.ser_id === serId);
@@ -404,13 +407,13 @@ async function cargarArboles() {
   for (const {hecho, versiones} of arboles) {
     const vs = versiones.map(v => `
       <div class="resultado">
-        <span class="tenue">${v.id} — distancia a la verdad: ${v.distancia_raiz.toFixed(3)}
-        — la conoce: ${v.conocida_por.join(', ') || 'nadie'}</span> ${botonHablar(v.contenido)}<br>
+        <span class="tenue">${esc(v.id)} — distancia a la verdad: ${v.distancia_raiz.toFixed(3)}
+        — la conoce: ${esc(v.conocida_por.join(', ') || 'nadie')}</span> ${botonHablar(v.contenido)}<br>
         «${esc(v.contenido)}»</div>`).join('');
     $('#arboles').insertAdjacentHTML('beforeend', `
       <div style="margin:.8rem 0;">
-        <b>${hecho.id}</b> <span class="chip">${hecho.lugar}</span>
-        <span class="chip">${hecho.momento}</span>${vs}
+        <b>${esc(hecho.id)}</b> <span class="chip">${esc(hecho.lugar)}</span>
+        <span class="chip">${esc(hecho.momento)}</span>${vs}
       </div>`);
   }
 }
@@ -420,23 +423,23 @@ async function cargarProbar() {
   const [seres, arboles, clocks] = await Promise.all([
     api('GET', '/seres'), api('GET', '/hechos'), api('GET', '/clocks')]);
   window.SERES = seres; window.ARBOLES = arboles;
-  $('#trReceptor').innerHTML = seres.map(s => `<option>${s.ser_id}</option>`).join('');
-  $('#scSer').innerHTML = seres.filter(s => s.hoja).map(s => `<option>${s.ser_id}</option>`).join('');
+  $('#trReceptor').innerHTML = seres.map(s => `<option>${esc(s.ser_id)}</option>`).join('');
+  $('#scSer').innerHTML = seres.filter(s => s.hoja).map(s => `<option>${esc(s.ser_id)}</option>`).join('');
   cargarAccionesDe($('#scSer').value);
   $('#trVersion').innerHTML = arboles.flatMap(({hecho, versiones}) =>
     versiones.map(v =>
-      `<option value="${v.id}">${hecho.id} — ${v.receptor || 'la raíz'} (${v.distancia_raiz.toFixed(2)})</option>`
+      `<option value="${esc(v.id)}">${esc(hecho.id)} — ${esc(v.receptor || 'la raíz')} (${v.distancia_raiz.toFixed(2)})</option>`
     )).join('');
   const activo = clocks.find(c => c.estado === 'activo');
   $('#clockAviso').innerHTML = activo
-    ? `<p class="tenue">clock «${activo.nombre}»: ${activo.segmentos_actuales}/${activo.segmentos_total}</p>`
+    ? `<p class="tenue">clock «${esc(activo.nombre)}»: ${activo.segmentos_actuales}/${activo.segmentos_total}</p>`
     : `<p class="rojo">No hay clock de amenaza.
        <button class="suave" onclick="crearClockRapido()">Crear «El mar se enturbia» (6)</button></p>`;
 }
 function cargarAccionesDe(serId) {
   const ser = (window.SERES || []).find(s => s.ser_id === serId);
   $('#scAccion').innerHTML = ser && ser.hoja
-    ? Object.entries(ser.hoja.acciones).map(([a, r]) => `<option value="${a}">${a} (${r} dados)</option>`).join('')
+    ? Object.entries(ser.hoja.acciones).map(([a, r]) => `<option value="${esc(a)}">${esc(a)} (${r} dados)</option>`).join('')
     : '';
 }
 async function crearClockRapido() {
@@ -455,7 +458,7 @@ async function transmitirRumor(boton) {
     const v = r.version;
     $('#trResultado').innerHTML = `
       <div class="resultado">
-        <span class="tenue">lo que guardó ${v.receptor} — distancia: ${v.distancia_raiz.toFixed(3)}</span>
+        <span class="tenue">lo que guardó ${esc(v.receptor)} — distancia: ${v.distancia_raiz.toFixed(3)}</span>
         ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»</div>`;
   } finally { boton.disabled = false; boton.textContent = 'Transmitir (LLM real)'; }
 }
@@ -491,7 +494,7 @@ async function tirarScore(empuje, boton) {
         dados [${res.dados_tirados.join(', ')}] → <b class="${clase}">${res.categoria.replace('_', ' ')}</b>
         ${empuje ? `<span class="chip">empuje: ${empuje}</span>` : ''}<br><br>
         ${esc(r.narracion)} ${botonHablar(r.narracion)}<br><br>
-        <span class="tenue">stress: ${r.stress}/9 · clock «${r.clock.nombre}»:
+        <span class="tenue">stress: ${r.stress}/9 · clock «${esc(r.clock.nombre)}»:
         ${r.clock.segmentos_actuales}/${r.clock.segmentos_total}
         ${r.clock.estado === 'completado' ? '<b class="rojo"> ¡COMPLETADO!</b>' : ''}</span>
       </div>`;
@@ -521,11 +524,11 @@ async function guardarTemplate() {
 function tarjetaEntrada(e) {
   return `
     <div class="resultado">
-      <span class="tenue">${e.fecha} · ${e.tipo} · ${e.ser}</span><br>
+      <span class="tenue">${esc(e.fecha)} · ${esc(e.tipo)} · ${esc(e.ser)}</span><br>
       <span class="tenue">entrada:</span> «${esc(e.entrada)}»<br>
       <span class="tenue">salida:</span> «${esc(e.salida)}» ${botonHablar(e.salida)}<br>
-      <span class="tenue">${Object.entries(e.terminos || {}).map(([k, v]) =>
-        `${k}: ${JSON.stringify(v)}`).join(' · ')}</span>
+      <span class="tenue">${esc(Object.entries(e.terminos || {}).map(([k, v]) =>
+        `${k}: ${JSON.stringify(v)}`).join(' · '))}</span>
     </div>`;
 }
 async function cargarBitacora() {
