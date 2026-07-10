@@ -107,6 +107,22 @@ def test_origen_de_un_hecho_registrado(tmp_path):
         recargado.hecho("no-existe")
 
 
+def test_consultas_de_inventario(tmp_path):
+    """Lo que cualquier vista del mundo necesita: qué hechos hay, qué versiones
+    tiene cada uno, y quiénes conocen cada versión (la inversa de
+    versiones_conocidas)."""
+    grafo = GrafoMundo(Persistencia(tmp_path / "mundo"))
+    raiz = grafo.registrar_hecho(HECHO)
+    grafo.registrar_conocimiento("un_testigo", raiz.id)
+    v1 = _version_derivada(raiz)
+    grafo.registrar_version(v1)
+
+    assert [h.id for h in grafo.hechos()] == [HECHO.id]
+    assert grafo.versiones_de(HECHO.id) == [raiz, v1]
+    assert grafo.quienes_conocen(raiz.id) == ["un_testigo"]
+    assert grafo.quienes_conocen(v1.id) == ["pescador_supersticioso"]
+
+
 def test_registros_invalidos_se_rechazan(tmp_path):
     grafo = GrafoMundo(Persistencia(tmp_path / "mundo"))
     raiz = grafo.registrar_hecho(HECHO)

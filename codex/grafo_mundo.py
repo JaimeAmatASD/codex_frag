@@ -92,6 +92,30 @@ class GrafoMundo:
         datos = self._g.nodes[hecho_id]
         return Hecho(id=hecho_id, **{k: v for k, v in datos.items() if k != "tipo"})
 
+    def hechos(self) -> list[Hecho]:
+        """Todos los hechos del mundo, en orden de registro."""
+        return [
+            self.hecho(nodo)
+            for nodo, datos in self._g.nodes(data=True)
+            if datos.get("tipo") == "hecho"
+        ]
+
+    def versiones_de(self, hecho_id: str) -> list[Version]:
+        """Todas las versiones de un hecho (la raíz primero), en orden de registro."""
+        return [
+            self.version(nodo)
+            for nodo, datos in self._g.nodes(data=True)
+            if datos.get("tipo") == "version" and datos.get("hecho_id") == hecho_id
+        ]
+
+    def quienes_conocen(self, version_id: str) -> list[str]:
+        """Los seres que conocen una versión (la inversa de `versiones_conocidas`)."""
+        return sorted(
+            origen
+            for origen, _, clave in self._g.in_edges(version_id, keys=True)
+            if clave == "conoce"
+        )
+
     def version(self, version_id: str) -> Version:
         """Reconstruye una Version validada desde su nodo."""
         if not self._g.has_node(version_id) or self._g.nodes[version_id].get("tipo") != "version":

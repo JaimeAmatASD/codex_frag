@@ -22,6 +22,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
 from codex.blades import HojaMecanica
+from codex.grafo_mundo import GrafoMundo
+from codex.hechos import Hecho
 from codex.memetario import Memetario
 from codex.modelos import Ser
 from codex.persistencia import Persistencia
@@ -33,6 +35,17 @@ NOMBRE_VALIDO = re.compile(r"^[a-zA-Z0-9_-]+$")   # nombres de mundo: sin rutas 
 
 class CuerpoMundo(BaseModel):
     nombre: str
+
+
+class CuerpoHecho(BaseModel):
+    """Un hecho nuevo del mundo, opcionalmente con su testigo (quién lo vio)."""
+
+    id: str
+    contenido: str
+    momento: str
+    lugar: str
+    origen: str = ""
+    testigo: str | None = None
 
 
 class CuerpoSer(BaseModel):
@@ -137,6 +150,32 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             )
         Memetario(ser, p)   # siembra el estado vivo inicial (INSERT OR IGNORE)
         return {"ok": True}
+
+    # ----- Zona Lore -----
+
+    @app.get("/hechos")
+    def listar_hechos(p: Persistencia = Depends(dep_persistencia)):
+        """Cada hecho con su árbol de versiones: quién conoce qué, qué tan lejos
+        de la verdad."""
+        grafo = GrafoMundo(p)
+        return [
+            {
+                "hecho": hecho.model_dump(),
+                "versiones": [
+                    {**v.model_dump(), "conocida_por": grafo.quienes_conocen(v.id)}
+                    for v in grafo.versiones_de(hecho.id)
+                ],
+            }
+            for hecho in grafo.hechos()
+        ]
+
+    @app.post("/hechos")
+    def registrar_hecho(cuerpo: CuerpoHecho, p: Persistencia = Depends(dep_persistencia)):
+        grafo = GrafoMundo(p)
+        raiz = grafo.registrar_hecho(Hecho(**cuerpo.model_dump(exclude={"testigo"})))
+        if cuerpo.testigo:
+            grafo.registrar_conocimiento(cuerpo.testigo, raiz.id)
+        return {"ok": True, "raiz": raiz.model_dump()}
 
     @app.get("/seres/{ser_id}/estado")
     def estado_ser(ser_id: str, p: Persistencia = Depends(dep_persistencia)):

@@ -135,3 +135,38 @@ def test_ser_invalido_da_400_con_mensaje_legible(taller):
     r = taller.post("/seres?mundo=taberna", json=roto)
     assert r.status_code == 400
     assert "tipo" in r.json()["detail"]
+
+
+# ----- Zona Lore -----
+
+HECHO = {
+    "id": "kraken-bahia",
+    "contenido": "Algo enorme rompió las redes de la barca del viejo Tomás.",
+    "momento": "1850-03-01T07:00:00",
+    "lugar": "la bahía",
+}
+
+
+def test_registrar_hecho_y_ver_su_arbol(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+
+    r = taller.post("/hechos?mundo=taberna", json={**HECHO, "testigo": "el_viejo_tomas"})
+    assert r.status_code == 200
+
+    hechos = taller.get("/hechos?mundo=taberna").json()
+    assert len(hechos) == 1
+    arbol = hechos[0]
+    assert arbol["hecho"]["id"] == "kraken-bahia"
+    assert arbol["hecho"]["origen"] == "taberna"           # nativo (ADR-007)
+    # La raíz existe, con distancia 0.0, y el testigo la conoce.
+    assert arbol["versiones"][0]["distancia_raiz"] == 0.0
+    assert arbol["versiones"][0]["conocida_por"] == ["el_viejo_tomas"]
+
+
+def test_hecho_duplicado_da_400(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/hechos?mundo=taberna", json=HECHO)
+
+    r = taller.post("/hechos?mundo=taberna", json=HECHO)
+    assert r.status_code == 400
+    assert "ya existe" in r.json()["detail"]
