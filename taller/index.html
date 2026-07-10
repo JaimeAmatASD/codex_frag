@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El Taller — Codex Fragmentum</title>
+<style>
+  :root { --fondo:#16181d; --panel:#1f232b; --borde:#333a46; --texto:#e8e6e0;
+          --tenue:#9aa3b2; --acento:#c9a227; --ok:#4caf7d; --mal:#d9534f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--texto);
+         font:16px/1.5 Georgia, "Times New Roman", serif; }
+  header { display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+           padding:.8rem 1.2rem; border-bottom:1px solid var(--borde); }
+  header h1 { font-size:1.15rem; margin:0; color:var(--acento); font-weight:normal;
+              letter-spacing:.06em; }
+  nav { display:flex; gap:.3rem; flex-wrap:wrap; }
+  nav button { background:none; border:1px solid transparent; color:var(--tenue);
+               padding:.35rem .8rem; cursor:pointer; font:inherit; border-radius:6px; }
+  nav button.activa { color:var(--texto); border-color:var(--borde); background:var(--panel); }
+  main { max-width:60rem; margin:0 auto; padding:1.2rem; }
+  section { display:none; } section.activa { display:block; }
+  .panel { background:var(--panel); border:1px solid var(--borde); border-radius:10px;
+           padding:1rem 1.2rem; margin:.8rem 0; }
+  h2 { font-size:1.05rem; color:var(--acento); font-weight:normal; margin:.2rem 0 .6rem; }
+  label { display:block; margin:.5rem 0 .1rem; color:var(--tenue); font-size:.9rem; }
+  input, select, textarea { width:100%; background:#14161b; color:var(--texto);
+    border:1px solid var(--borde); border-radius:6px; padding:.45rem .6rem; font:inherit; }
+  textarea { min-height:4.5rem; }
+  .fila { display:flex; gap:.6rem; align-items:end; flex-wrap:wrap; }
+  .fila > div { flex:1; min-width:8rem; }
+  button.accion { background:var(--acento); color:#14161b; border:none; border-radius:6px;
+    padding:.5rem 1rem; font:inherit; cursor:pointer; margin-top:.6rem; }
+  button.suave { background:none; border:1px solid var(--borde); color:var(--texto);
+    border-radius:6px; padding:.4rem .8rem; font:inherit; cursor:pointer; margin-top:.6rem; }
+  button.peligro { border-color:var(--mal); color:var(--mal); }
+  button.mic { background:none; border:1px solid var(--borde); border-radius:6px;
+    cursor:pointer; font-size:1rem; padding:.3rem .5rem; }
+  button.mic.grabando { border-color:var(--mal); animation:latido 1s infinite; }
+  @keyframes latido { 50% { opacity:.4; } }
+  .resultado { white-space:pre-wrap; border-left:3px solid var(--acento);
+    padding:.6rem .9rem; margin:.8rem 0; background:#181b21; border-radius:0 8px 8px 0; }
+  .tenue { color:var(--tenue); font-size:.88rem; }
+  .verde { color:var(--ok); } .rojo { color:var(--mal); }
+  #banner { display:none; background:#3a1d1d; border:1px solid var(--mal); color:#f0c0be;
+    padding:.6rem 1rem; border-radius:8px; margin:.8rem 0; white-space:pre-wrap; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  td, th { border-bottom:1px solid var(--borde); padding:.3rem .5rem; text-align:left; }
+  th { color:var(--tenue); font-weight:normal; }
+  .meme-fila, .accion-fila { display:flex; gap:.4rem; margin:.3rem 0; flex-wrap:wrap; }
+  .meme-fila input, .accion-fila input, .meme-fila select { flex:1; min-width:5rem; }
+  .comparar { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+  @media (max-width:700px){ .comparar { grid-template-columns:1fr; } }
+  pre.salida { background:#101216; padding:.8rem; border-radius:8px; overflow-x:auto;
+    font-size:.8rem; max-height:22rem; overflow-y:auto; }
+  .chip { display:inline-block; border:1px solid var(--borde); border-radius:99px;
+    padding:.05rem .6rem; margin:.1rem; font-size:.82rem; color:var(--tenue); }
+</style>
+</head>
+<body>
+<header>
+  <h1>EL TALLER</h1>
+  <nav id="pestanas"></nav>
+  <div style="margin-left:auto; display:flex; gap:.5rem; align-items:center;">
+    <span class="tenue">mundo:</span>
+    <select id="selMundo" style="width:auto" onchange="elegirMundo(this.value)"></select>
+  </div>
+</header>
+<main>
+  <div id="banner"></div>
+
+  <!-- ================= MUNDO ================= -->
+  <section id="zona-mundo">
+    <div class="panel">
+      <h2>Crear un mundo</h2>
+      <div class="fila">
+        <div><label>nombre (letras, números, guiones)</label><input id="nuevoMundo"></div>
+        <button class="accion" onclick="crearMundo()">Crear</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Estado vivo</h2>
+      <p class="tenue">Borra lo jugado (pesos, grafo de rumores, stress, clocks). Las semillas
+      — tus personajes, hechos y la bitácora — quedan.</p>
+      <button class="suave peligro" id="btnReset" onclick="resetear(this)">Resetear estado vivo</button>
+    </div>
+  </section>
+
+  <!-- ================= PERSONAJES ================= -->
+  <section id="zona-personajes">
+    <div class="panel"><h2>Los seres de este mundo</h2><div id="listaSeres" class="tenue">…</div></div>
+    <div class="panel">
+      <h2 id="tituloFormSer">Crear un ser</h2>
+      <div class="fila">
+        <div><label>id (sin espacios)</label><input id="serId"></div>
+        <div><label>mana máximo</label><input id="serMana" type="number" value="40"></div>
+        <div><label>origen (vacío = este mundo)</label><input id="serOrigen"></div>
+      </div>
+      <label>memes — las piedras fundacionales nunca decaen y siempre entran</label>
+      <div id="memes"></div>
+      <button class="suave" onclick="agregarMeme()">+ meme</button>
+      <label style="margin-top:.8rem">hoja mecánica — acciones y rango (0 a 4 dados)</label>
+      <div class="fila">
+        <div><label>stress máximo</label><input id="hojaStress" type="number" value="9"></div>
+      </div>
+      <div id="acciones"></div>
+      <button class="suave" onclick="agregarAccion()">+ acción</button><br>
+      <button class="accion" onclick="guardarSer()">Guardar ser</button>
+    </div>
+  </section>
+
+  <!-- ================= LORE ================= -->
+  <section id="zona-lore">
+    <div class="panel">
+      <h2>Registrar un hecho — la verdad raíz</h2>
+      <div class="fila">
+        <div><label>id</label><input id="hechoId"></div>
+        <div><label>lugar</label><input id="hechoLugar"></div>
+        <div><label>momento del mundo (ISO)</label><input id="hechoMomento" value="1850-03-01T07:00:00"></div>
+        <div><label>testigo (quién lo vio)</label><input id="hechoTestigo"></div>
+      </div>
+      <label>qué pasó, objetivamente <button class="mic" data-mic="hechoContenido">🎙</button></label>
+      <textarea id="hechoContenido"></textarea>
+      <button class="accion" onclick="registrarHecho()">Registrar</button>
+    </div>
+    <div class="panel"><h2>Los hechos y sus versiones</h2><div id="arboles" class="tenue">…</div></div>
+  </section>
+
+  <!-- ================= PROBAR ================= -->
+  <section id="zona-probar">
+    <div class="panel">
+      <h2>Contale algo a un ser — el rumor muta</h2>
+      <div class="fila">
+        <div><label>quién cuenta</label><input id="trEmisor" list="listaIdsSeres" placeholder="un_testigo"></div>
+        <div><label>quién escucha</label><select id="trReceptor"></select></div>
+        <div><label>momento del mundo</label><input id="trMomento" value="1850-03-01T09:00:00"></div>
+      </div>
+      <label>qué versión cuenta</label><select id="trVersion"></select>
+      <button class="accion" onclick="transmitirRumor(this)">Transmitir (LLM real)</button>
+      <div id="trResultado"></div>
+    </div>
+    <div class="panel">
+      <h2>Score — una acción con riesgo</h2>
+      <div id="clockAviso"></div>
+      <div class="fila">
+        <div><label>quién actúa</label><select id="scSer" onchange="cargarAccionesDe(this.value)"></select></div>
+        <div><label>acción de su hoja</label><select id="scAccion"></select></div>
+      </div>
+      <label>qué intenta, concretamente <button class="mic" data-mic="scDescripcion">🎙</button></label>
+      <textarea id="scDescripcion"></textarea>
+      <button class="accion" onclick="evaluarScore()">Ver los términos</button>
+      <div id="scTerminos"></div>
+      <div id="scResultado"></div>
+    </div>
+    <div class="panel">
+      <h2>La suite de tests</h2>
+      <button class="accion" onclick="correrTests(this)">Correr los tests</button>
+      <div id="testsResultado"></div>
+    </div>
+  </section>
+
+  <!-- ================= TEMPLATES ================= -->
+  <section id="zona-templates">
+    <div class="panel">
+      <h2>Los prompts del motor — acá se pule la voz</h2>
+      <p class="tenue">Si las mutaciones o narraciones no revelan, se itera el template, no el motor.
+      Los cambios valen para la próxima prueba: ajustá, probá, compará en la bitácora.</p>
+      <div class="fila">
+        <div><label>template</label>
+          <select id="selTemplate" onchange="cargarTemplate()">
+            <option value="mutacion">mutación del rumor</option>
+            <option value="narracion_score">narración del Score</option>
+          </select></div>
+      </div>
+      <textarea id="textoTemplate" style="min-height:22rem; font-family:monospace; font-size:.85rem;"></textarea>
+      <button class="accion" onclick="guardarTemplate()">Guardar template</button>
+    </div>
+  </section>
+
+  <!-- ================= BITÁCORA ================= -->
+  <section id="zona-bitacora">
+    <div class="panel">
+      <h2>Bitácora — pulir es comparar</h2>
+      <p class="tenue">Marcá dos entradas para verlas lado a lado.</p>
+      <div id="comparadas"></div>
+      <div id="entradasBitacora" class="tenue">…</div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- infraestructura ---------- */
+const $ = s => document.querySelector(s);
+let MUNDO = localStorage.getItem('taller_mundo') || '';
+
+function banner(msj) {
+  const b = $('#banner');
+  if (!msj) { b.style.display = 'none'; return; }
+  b.textContent = msj; b.style.display = 'block';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+async function api(metodo, ruta, cuerpo) {
+  banner(null);
+  const conMundo = ruta.includes('?') ? `${ruta}&mundo=${MUNDO}` : `${ruta}?mundo=${MUNDO}`;
+  const sinMundo = ['/mundos', '/tests', '/templates'].some(p => ruta.startsWith(p));
+  const r = await fetch(sinMundo ? ruta : conMundo, {
+    method: metodo,
+    headers: {'Content-Type': 'application/json'},
+    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+  });
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) { banner(datos.detail || `Error ${r.status}`); throw new Error(datos.detail); }
+  return datos;
+}
+
+/* ---------- pestañas ---------- */
+const ZONAS = [['mundo','Mundo'],['personajes','Personajes'],['lore','Lore'],
+               ['probar','Probar'],['templates','Templates'],['bitacora','Bitácora']];
+const CARGADORES = {personajes: cargarSeres, lore: cargarArboles, probar: cargarProbar,
+                    templates: cargarTemplate, bitacora: cargarBitacora};
+function armarPestanas() {
+  $('#pestanas').innerHTML = ZONAS.map(([id, titulo]) =>
+    `<button id="tab-${id}" onclick="mostrarZona('${id}')">${titulo}</button>`).join('');
+}
+function mostrarZona(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('activa'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('activa'));
+  $(`#zona-${id}`).classList.add('activa');
+  $(`#tab-${id}`).classList.add('activa');
+  if (CARGADORES[id]) CARGADORES[id]().catch(() => {});
+}
+
+/* ---------- audio: dictar y escuchar ---------- */
+function armarMics() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  document.querySelectorAll('button.mic').forEach(boton => {
+    if (!SR) { boton.style.display = 'none'; return; }
+    const destino = document.getElementById(boton.dataset.mic);
+    const rec = new SR(); rec.lang = 'es-AR';
+    let grabando = false;
+    boton.onclick = e => {
+      e.preventDefault();
+      if (grabando) { rec.stop(); return; }
+      rec.start(); grabando = true; boton.classList.add('grabando');
+    };
+    rec.onresult = e => {
+      destino.value += (destino.value ? ' ' : '') + e.results[0][0].transcript;
+    };
+    rec.onend = () => { grabando = false; boton.classList.remove('grabando'); };
+    rec.onerror = () => { grabando = false; boton.classList.remove('grabando'); };
+  });
+}
+function hablar(texto) {
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'es-AR';
+  const voz = speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
+  if (voz) u.voice = voz;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+const PARA_HABLAR = [];   // los textos van por índice: nada de texto crudo en atributos
+function botonHablar(texto) {
+  PARA_HABLAR.push(texto);
+  return `<button class="mic" onclick="hablar(PARA_HABLAR[${PARA_HABLAR.length - 1}])">▶</button>`;
+}
+function esc(texto) {
+  return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ---------- mundo ---------- */
+async function cargarMundos() {
+  const mundos = await api('GET', '/mundos');
+  if (!MUNDO && mundos.length) MUNDO = mundos[0];
+  $('#selMundo').innerHTML = mundos.map(m =>
+    `<option ${m === MUNDO ? 'selected' : ''}>${m}</option>`).join('') ||
+    '<option value="">(sin mundos)</option>';
+}
+function elegirMundo(m) { MUNDO = m; localStorage.setItem('taller_mundo', m); }
+async function crearMundo() {
+  const nombre = $('#nuevoMundo').value.trim();
+  await api('POST', '/mundos', {nombre});
+  MUNDO = nombre; localStorage.setItem('taller_mundo', nombre);
+  $('#nuevoMundo').value = '';
+  await cargarMundos();
+}
+async function resetear(boton) {
+  if (boton.textContent !== '¿Seguro? Borra lo jugado') {
+    boton.textContent = '¿Seguro? Borra lo jugado';
+    setTimeout(() => boton.textContent = 'Resetear estado vivo', 4000);
+    return;
+  }
+  await api('POST', '/reset');
+  boton.textContent = 'Resetear estado vivo';
+  banner(null);
+}
+
+/* ---------- personajes ---------- */
+function filaMeme(m = {}) {
+  const div = document.createElement('div');
+  div.className = 'meme-fila';
+  div.innerHTML = `
+    <input placeholder="id" class="m-id" value="${m.id || ''}">
+    <select class="m-tipo">
+      ${['fundacional','operativo','experimental'].map(t =>
+        `<option ${m.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+    </select>
+    <input placeholder="texto del meme" class="m-texto" style="flex:3" value="${m.texto || ''}">
+    <input placeholder="peso" class="m-peso" type="number" step="0.5" style="max-width:5rem" value="${m.peso_inicial ?? 5}">
+    <input placeholder="costo" class="m-costo" type="number" style="max-width:5rem" value="${m.costo ?? 20}">
+    <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
+  return div;
+}
+function agregarMeme(m) { $('#memes').appendChild(filaMeme(m)); }
+function filaAccion(nombre = '', rango = 1) {
+  const div = document.createElement('div');
+  div.className = 'accion-fila';
+  div.innerHTML = `
+    <input placeholder="acción (p. ej. persuadir)" class="a-nombre" value="${nombre}">
+    <input type="number" min="0" max="4" class="a-rango" style="max-width:5rem" value="${rango}">
+    <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
+  return div;
+}
+function agregarAccion(n, r) { $('#acciones').appendChild(filaAccion(n, r)); }
+
+async function cargarSeres() {
+  const seres = await api('GET', '/seres');
+  window.SERES = seres;
+  $('#listaSeres').innerHTML = seres.length ? '' : 'Todavía no hay seres en este mundo.';
+  for (const ser of seres) {
+    const estado = await api('GET', `/seres/${ser.ser_id}/estado`);
+    const filas = Object.entries(estado).map(([id, e]) =>
+      `<tr><td>${id}</td><td>${e.peso.toFixed(1)}</td><td>${e.veces_en_loadout}</td>
+       <td>${e.veces_movilizado}</td></tr>`).join('');
+    $('#listaSeres').insertAdjacentHTML('beforeend', `
+      <div style="margin:.6rem 0; padding:.6rem; border:1px solid var(--borde); border-radius:8px;">
+        <b>${ser.ser_id}</b> <span class="chip">origen: ${ser.origen}</span>
+        <span class="chip">mana: ${ser.mana_max}</span>
+        ${ser.hoja ? `<span class="chip">hoja: ${Object.entries(ser.hoja.acciones).map(([a,r])=>a+' '+r).join(' · ')}</span>` : '<span class="chip">sin hoja</span>'}
+        <button class="suave" onclick='editarSer(${JSON.stringify(ser.ser_id)})'>editar</button>
+        <details><summary class="tenue">el cristal, viviendo (pesos y activaciones)</summary>
+          <table><tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}</table>
+        </details>
+      </div>`);
+  }
+  const ids = seres.map(s => s.ser_id);
+  document.getElementById('listaIdsSeres')?.remove();
+  document.body.insertAdjacentHTML('beforeend',
+    `<datalist id="listaIdsSeres">${ids.map(i => `<option>${i}</option>`).join('')}</datalist>`);
+}
+function editarSer(serId) {
+  const ser = window.SERES.find(s => s.ser_id === serId);
+  $('#tituloFormSer').textContent = `Editando: ${serId}`;
+  $('#serId').value = ser.ser_id; $('#serMana').value = ser.mana_max;
+  $('#serOrigen').value = ser.origen;
+  $('#memes').innerHTML = ''; ser.memes.forEach(agregarMeme);
+  $('#acciones').innerHTML = '';
+  if (ser.hoja) {
+    $('#hojaStress').value = ser.hoja.stress_max;
+    Object.entries(ser.hoja.acciones).forEach(([n, r]) => agregarAccion(n, r));
+  }
+  window.scrollTo({top: 9999, behavior: 'smooth'});
+}
+async function guardarSer() {
+  const memes = [...document.querySelectorAll('.meme-fila')].map(f => ({
+    id: f.querySelector('.m-id').value.trim(),
+    tipo: f.querySelector('.m-tipo').value,
+    texto: f.querySelector('.m-texto').value.trim(),
+    peso_inicial: parseFloat(f.querySelector('.m-peso').value),
+    costo: parseInt(f.querySelector('.m-costo').value || 0),
+  }));
+  const acciones = {};
+  [...document.querySelectorAll('.accion-fila')].forEach(f => {
+    const n = f.querySelector('.a-nombre').value.trim();
+    if (n) acciones[n] = parseInt(f.querySelector('.a-rango').value);
+  });
+  const cuerpo = {
+    ser_id: $('#serId').value.trim(),
+    origen: $('#serOrigen').value.trim(),
+    mana_max: parseInt($('#serMana').value),
+    memes,
+    hoja: Object.keys(acciones).length
+      ? {stress_max: parseInt($('#hojaStress').value), acciones} : null,
+  };
+  await api('POST', '/seres', cuerpo);
+  $('#tituloFormSer').textContent = 'Crear un ser';
+  await cargarSeres();
+}
+
+/* ---------- lore ---------- */
+async function registrarHecho() {
+  await api('POST', '/hechos', {
+    id: $('#hechoId').value.trim(),
+    contenido: $('#hechoContenido').value.trim(),
+    momento: $('#hechoMomento').value.trim(),
+    lugar: $('#hechoLugar').value.trim(),
+    testigo: $('#hechoTestigo').value.trim() || null,
+  });
+  await cargarArboles();
+}
+async function cargarArboles() {
+  const arboles = await api('GET', '/hechos');
+  window.ARBOLES = arboles;
+  $('#arboles').innerHTML = arboles.length ? '' : 'Todavía no pasó nada en este mundo.';
+  for (const {hecho, versiones} of arboles) {
+    const vs = versiones.map(v => `
+      <div class="resultado">
+        <span class="tenue">${v.id} — distancia a la verdad: ${v.distancia_raiz.toFixed(3)}
+        — la conoce: ${v.conocida_por.join(', ') || 'nadie'}</span> ${botonHablar(v.contenido)}<br>
+        «${esc(v.contenido)}»</div>`).join('');
+    $('#arboles').insertAdjacentHTML('beforeend', `
+      <div style="margin:.8rem 0;">
+        <b>${hecho.id}</b> <span class="chip">${hecho.lugar}</span>
+        <span class="chip">${hecho.momento}</span>${vs}
+      </div>`);
+  }
+}
+
+/* ---------- probar ---------- */
+async function cargarProbar() {
+  const [seres, arboles, clocks] = await Promise.all([
+    api('GET', '/seres'), api('GET', '/hechos'), api('GET', '/clocks')]);
+  window.SERES = seres; window.ARBOLES = arboles;
+  $('#trReceptor').innerHTML = seres.map(s => `<option>${s.ser_id}</option>`).join('');
+  $('#scSer').innerHTML = seres.filter(s => s.hoja).map(s => `<option>${s.ser_id}</option>`).join('');
+  cargarAccionesDe($('#scSer').value);
+  $('#trVersion').innerHTML = arboles.flatMap(({hecho, versiones}) =>
+    versiones.map(v =>
+      `<option value="${v.id}">${hecho.id} — ${v.receptor || 'la raíz'} (${v.distancia_raiz.toFixed(2)})</option>`
+    )).join('');
+  const activo = clocks.find(c => c.estado === 'activo');
+  $('#clockAviso').innerHTML = activo
+    ? `<p class="tenue">clock «${activo.nombre}»: ${activo.segmentos_actuales}/${activo.segmentos_total}</p>`
+    : `<p class="rojo">No hay clock de amenaza.
+       <button class="suave" onclick="crearClockRapido()">Crear «El mar se enturbia» (6)</button></p>`;
+}
+function cargarAccionesDe(serId) {
+  const ser = (window.SERES || []).find(s => s.ser_id === serId);
+  $('#scAccion').innerHTML = ser && ser.hoja
+    ? Object.entries(ser.hoja.acciones).map(([a, r]) => `<option value="${a}">${a} (${r} dados)</option>`).join('')
+    : '';
+}
+async function crearClockRapido() {
+  await api('POST', '/clocks', {id: 'amenaza', nombre: 'El mar se enturbia', segmentos_total: 6});
+  await cargarProbar();
+}
+async function transmitirRumor(boton) {
+  boton.disabled = true; boton.textContent = 'El rumor viaja…';
+  try {
+    const r = await api('POST', '/transmitir', {
+      emisor_id: $('#trEmisor').value.trim() || 'un_testigo',
+      receptor_id: $('#trReceptor').value,
+      version_id: $('#trVersion').value,
+      momento: $('#trMomento').value.trim(),
+    });
+    const v = r.version;
+    $('#trResultado').innerHTML = `
+      <div class="resultado">
+        <span class="tenue">lo que guardó ${v.receptor} — distancia: ${v.distancia_raiz.toFixed(3)}</span>
+        ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»</div>`;
+  } finally { boton.disabled = false; boton.textContent = 'Transmitir (LLM real)'; }
+}
+async function evaluarScore() {
+  const r = await api('POST', '/score/evaluar', {
+    ser_id: $('#scSer').value,
+    accion: $('#scAccion').value,
+    descripcion: $('#scDescripcion').value.trim(),
+  });
+  window.TERMINOS = r;
+  const e = r.evaluacion;
+  $('#scResultado').innerHTML = '';
+  $('#scTerminos').innerHTML = `
+    <div class="resultado">
+      Posición <b>${e.posicion}</b> · efecto <b>${e.efecto}</b> · <b>${e.dados}</b> dado(s)
+      <span class="tenue">(score ${e.detalles.score.toFixed(2)})</span><br>
+      <button class="accion" onclick="tirarScore(null, this)">Tirar</button>
+      <button class="suave" onclick="tirarScore('dado_extra', this)">Empujar: +1 dado (2 stress)</button>
+      <button class="suave" onclick="tirarScore('mejorar_posicion', this)">Empujar: posición</button>
+      <button class="suave" onclick="tirarScore('mejorar_efecto', this)">Empujar: efecto</button>
+      <button class="suave" onclick="$('#scTerminos').innerHTML=''">Retirarse (sin costo)</button>
+    </div>`;
+}
+async function tirarScore(empuje, boton) {
+  boton.disabled = true;
+  try {
+    const r = await api('POST', '/score/tirar', {...window.TERMINOS, empuje});
+    const res = r.resolucion;
+    const clase = {limpio: 'verde', con_costo: '', mala_consecuencia: 'rojo'}[res.categoria];
+    $('#scTerminos').innerHTML = '';
+    $('#scResultado').innerHTML = `
+      <div class="resultado">
+        dados [${res.dados_tirados.join(', ')}] → <b class="${clase}">${res.categoria.replace('_', ' ')}</b>
+        ${empuje ? `<span class="chip">empuje: ${empuje}</span>` : ''}<br><br>
+        ${esc(r.narracion)} ${botonHablar(r.narracion)}<br><br>
+        <span class="tenue">stress: ${r.stress}/9 · clock «${r.clock.nombre}»:
+        ${r.clock.segmentos_actuales}/${r.clock.segmentos_total}
+        ${r.clock.estado === 'completado' ? '<b class="rojo"> ¡COMPLETADO!</b>' : ''}</span>
+      </div>`;
+  } finally { boton.disabled = false; }
+}
+async function correrTests(boton) {
+  boton.disabled = true; boton.textContent = 'Corriendo…';
+  try {
+    const r = await api('POST', '/tests', {});
+    $('#testsResultado').innerHTML = `
+      <p class="${r.exito ? 'verde' : 'rojo'}">${r.exito ? 'TODO EN VERDE' : 'HAY ROJOS'}</p>
+      <pre class="salida">${r.salida.replace(/</g, '&lt;')}</pre>`;
+  } finally { boton.disabled = false; boton.textContent = 'Correr los tests'; }
+}
+
+/* ---------- templates ---------- */
+async function cargarTemplate() {
+  const r = await api('GET', `/templates/${$('#selTemplate').value}`);
+  $('#textoTemplate').value = r.texto;
+}
+async function guardarTemplate() {
+  await api('PUT', `/templates/${$('#selTemplate').value}`, {texto: $('#textoTemplate').value});
+  banner(null);
+}
+
+/* ---------- bitácora ---------- */
+function tarjetaEntrada(e) {
+  return `
+    <div class="resultado">
+      <span class="tenue">${e.fecha} · ${e.tipo} · ${e.ser}</span><br>
+      <span class="tenue">entrada:</span> «${esc(e.entrada)}»<br>
+      <span class="tenue">salida:</span> «${esc(e.salida)}» ${botonHablar(e.salida)}<br>
+      <span class="tenue">${Object.entries(e.terminos || {}).map(([k, v]) =>
+        `${k}: ${JSON.stringify(v)}`).join(' · ')}</span>
+    </div>`;
+}
+async function cargarBitacora() {
+  const entradas = await api('GET', '/bitacora');
+  window.BITACORA = entradas;
+  $('#comparadas').innerHTML = '';
+  $('#entradasBitacora').innerHTML = entradas.length ? '' : 'Todavía no probaste nada en este mundo.';
+  entradas.forEach((e, i) => {
+    $('#entradasBitacora').insertAdjacentHTML('beforeend', `
+      <div style="display:flex; gap:.6rem; align-items:start; margin:.4rem 0;">
+        <input type="checkbox" style="width:auto; margin-top:1rem" onchange="compararBitacora()"
+               class="cmp" data-i="${i}">
+        <div style="flex:1">${tarjetaEntrada(e)}</div>
+      </div>`);
+  });
+}
+function compararBitacora() {
+  const marcadas = [...document.querySelectorAll('.cmp:checked')];
+  if (marcadas.length > 2) { marcadas[0].checked = false; return compararBitacora(); }
+  $('#comparadas').innerHTML = marcadas.length === 2
+    ? `<div class="comparar">${marcadas.map(c => tarjetaEntrada(window.BITACORA[c.dataset.i])).join('')}</div><hr style="border-color:var(--borde)">`
+    : '';
+}
+
+/* ---------- arranque ---------- */
+armarPestanas();
+armarMics();
+cargarMundos().then(() => mostrarZona('mundo'));
+</script>
+</body>
+</html>

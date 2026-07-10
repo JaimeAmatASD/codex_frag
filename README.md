@@ -21,12 +21,24 @@ python demos/prueba_paso1.py    # demo con embeddings reales (baja ~90 MB la pri
 
 El demo carga dos seres (un pescador supersticioso y un comerciante escéptico), les da la misma noticia, y muestra que cada uno activa memes distintos, coherentes con quién es.
 
+## El Taller
+
+El dashboard autoral para pulir el mundo sin tocar JSON ni terminal (diseño en `docs/TALLER_DISENO.md`):
+
+```bash
+pip install -e ".[dev,taller]"          # una sola vez
+python taller/servidor.py               # abre el navegador solo
+```
+
+Crear y editar personajes y lore, tirarles noticias (el rumor muta con Gemini) y Scores (posición, efecto y dados a la vista antes de tirar), editar los templates del motor, correr los tests, y comparar iteraciones en la bitácora. Con dictado por voz 🎙 y lectura en voz alta ▶ (Chrome). La API key sale de `GEMINI_API_KEY` o de `~/.gemini_key`.
+
 ## Estructura
 
 - `codex/` — el motor. Cada módulo documenta en su docstring qué regla de diseño encarna y de qué bug real (del prototipo Fray Tomás) nace.
 - `tests/` — un archivo por módulo; deterministas, sin red, sin tokens (codificador de embeddings inyectable, cliente LLM mock).
 - `mundos/` — cada mundo es una carpeta: definiciones de seres en JSON legible (la semilla, versionada), estado vivo en SQLite (runtime, no se versiona).
-- `docs/` — la memoria de diseño del proyecto: visión (Fase 0), los seis ADRs, el sistema de corpus, la verificación del prototipo, y los prompts de arranque de cada fase.
+- `docs/` — la memoria de diseño del proyecto: visión (Fase 0), los ADRs, el sistema de corpus, la verificación del prototipo, y los prompts de arranque de cada fase.
+- `taller/` — el dashboard autoral (fuera del motor): servidor fino + una página.
 - `skills/` — fuentes de los skills de Claude que acompañan el desarrollo.
 
 ## Las cinco reglas
