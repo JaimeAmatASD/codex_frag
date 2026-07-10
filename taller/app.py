@@ -52,6 +52,7 @@ CARPETA_TEMPLATES = RAIZ_REPO / "templates"
 # Los únicos templates editables desde el taller: los dos que los docs mandan
 # iterar cuando las voces no revelan. Nada de rutas libres.
 TEMPLATES_EDITABLES = {"mutacion": "mutacion.txt", "narracion_score": "narracion_score.txt"}
+CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
 
 
@@ -113,7 +114,7 @@ class CuerpoTemplate(BaseModel):
 
 
 class CuerpoTests(BaseModel):
-    ruta: str = "tests"   # qué correr; default la suite completa del repo
+    ruta: str = "."   # relativa a la carpeta de tests del repo; default: toda la suite
 
 
 def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
@@ -124,6 +125,19 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
     raiz.mkdir(parents=True, exist_ok=True)
     # Recursos compartidos entre requests (el modelo de embeddings es pesado: UNA carga).
     recursos = {"cliente": cliente_llm, "encoder": encoder, "encoder_fallo": False, "rng": rng}
+
+    # ----- El taller es local y de UNA persona -----
+    # Una página web ajena abierta en el mismo navegador puede disparar requests
+    # contra localhost (drive-by). El navegador les pone Origin: acá se rechazan.
+
+    @app.middleware("http")
+    async def _solo_origen_local(request: Request, call_next):
+        origen = request.headers.get("origin")
+        if origen is not None:
+            host = origen.split("://")[-1].split(":")[0]
+            if host not in ("127.0.0.1", "localhost"):
+                return JSONResponse(status_code=403, content={"detail": "Origen no permitido."})
+        return await call_next(request)
 
     # ----- Errores del motor → mensajes legibles en el formulario -----
 
@@ -187,6 +201,14 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
                 if datos is not None:
                     hojas[carpeta.name] = HojaMecanica(**datos)
         return SistemaBlades(hojas=hojas, clock_amenaza_id=activos[0].id, rng=recursos["rng"])
+
+    # ----- La página -----
+
+    @app.get("/")
+    def pagina():
+        from fastapi.responses import HTMLResponse
+
+        return HTMLResponse((Path(__file__).parent / "index.html").read_text(encoding="utf-8"))
 
     # ----- Zona Mundo -----
 
@@ -385,12 +407,22 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
 
     @app.post("/tests")
     def correr_tests(cuerpo: CuerpoTests):
-        """`pytest -q` en subproceso, con timeout. La página pinta verde o rojo."""
+        """`pytest -q` en subproceso, con timeout. La página pinta verde o rojo.
+
+        La ruta va relativa a la carpeta de tests del repo, sin flags: pytest
+        EJECUTA el conftest de lo que se le apunte, así que una ruta libre sería
+        ejecución de código arbitrario (hallazgo de la revisión de seguridad)."""
         import subprocess
         import sys
 
+        if cuerpo.ruta.startswith("-"):
+            raise HTTPException(400, "La ruta no lleva flags.")
+        ruta = (CARPETA_TESTS / cuerpo.ruta).resolve()
+        if not ruta.is_relative_to(CARPETA_TESTS.resolve()):
+            raise HTTPException(400, "Solo se corre lo que vive en la carpeta de tests del repo.")
+
         proceso = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", cuerpo.ruta],
+            [sys.executable, "-m", "pytest", "-q", str(ruta)],
             cwd=RAIZ_REPO, capture_output=True, text=True, timeout=TIMEOUT_TESTS,
         )
         salida = proceso.stdout + proceso.stderr

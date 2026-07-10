@@ -297,13 +297,41 @@ def test_solo_los_dos_templates_del_motor(taller):
     assert taller.put("/templates/passwd", json={"texto": "x"}).status_code == 404
 
 
-def test_correr_una_suite_de_pytest(taller, tmp_path):
+def test_correr_una_suite_de_pytest(taller, tmp_path, monkeypatch):
+    import taller.app as modulo_app
+    monkeypatch.setattr(modulo_app, "CARPETA_TESTS", tmp_path)
     (tmp_path / "test_trivial.py").write_text(
         "def test_pasa():\n    assert True\n", encoding="utf-8"
     )
 
-    r = taller.post("/tests", json={"ruta": str(tmp_path / "test_trivial.py")})
+    r = taller.post("/tests", json={"ruta": "test_trivial.py"})
 
     assert r.status_code == 200
     assert r.json()["exito"] is True
     assert "1 passed" in r.json()["salida"]
+
+
+def test_el_runner_de_tests_no_acepta_flags_ni_rutas_ajenas(taller):
+    """pytest EJECUTA el conftest de lo que se le apunte: la ruta va relativa a la
+    carpeta de tests del repo y sin flags, o no va."""
+    assert taller.post("/tests", json={"ruta": "-p malicioso"}).status_code == 400
+    assert taller.post("/tests", json={"ruta": "../../otro/lado"}).status_code == 400
+    assert taller.post("/tests", json={"ruta": "/tmp/lo-que-sea"}).status_code == 400
+
+
+def test_requests_de_otro_origen_se_rechazan(taller):
+    """El taller es local y de una persona: una página web ajena no puede operarlo
+    (drive-by contra localhost)."""
+    r = taller.post("/mundos", json={"nombre": "intruso"},
+                    headers={"Origin": "https://malicioso.example"})
+    assert r.status_code == 403
+    assert taller.get("/mundos").json() == []
+
+
+# ----- La página -----
+
+def test_la_pagina_se_sirve_en_la_raiz(taller):
+    r = taller.get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Taller" in r.text
