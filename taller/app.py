@@ -47,6 +47,13 @@ logger = logging.getLogger(__name__)
 
 NOMBRE_VALIDO = re.compile(r"^[a-zA-Z0-9_-]+$")   # nombres de mundo: sin rutas ni sorpresas
 
+RAIZ_REPO = Path(__file__).parent.parent
+CARPETA_TEMPLATES = RAIZ_REPO / "templates"
+# Los únicos templates editables desde el taller: los dos que los docs mandan
+# iterar cuando las voces no revelan. Nada de rutas libres.
+TEMPLATES_EDITABLES = {"mutacion": "mutacion.txt", "narracion_score": "narracion_score.txt"}
+TIMEOUT_TESTS = 300
+
 
 class CuerpoMundo(BaseModel):
     nombre: str
@@ -99,6 +106,14 @@ class CuerpoClock(BaseModel):
     id: str
     nombre: str
     segmentos_total: int
+
+
+class CuerpoTemplate(BaseModel):
+    texto: str
+
+
+class CuerpoTests(BaseModel):
+    ruta: str = "tests"   # qué correr; default la suite completa del repo
 
 
 def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
@@ -349,5 +364,36 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
     @app.get("/bitacora")
     def leer_bitacora(mundo: str):
         return bitacora.leer(_carpeta_mundo(mundo))
+
+    # ----- Zona Templates -----
+
+    def _ruta_template(nombre: str) -> Path:
+        if nombre not in TEMPLATES_EDITABLES:
+            raise HTTPException(404, f"Ese template no se edita desde el taller: {nombre}")
+        return CARPETA_TEMPLATES / TEMPLATES_EDITABLES[nombre]
+
+    @app.get("/templates/{nombre}")
+    def leer_template(nombre: str):
+        return {"texto": _ruta_template(nombre).read_text(encoding="utf-8")}
+
+    @app.put("/templates/{nombre}")
+    def guardar_template(nombre: str, cuerpo: CuerpoTemplate):
+        _ruta_template(nombre).write_text(cuerpo.texto, encoding="utf-8")
+        return {"ok": True}
+
+    # ----- Correr los tests -----
+
+    @app.post("/tests")
+    def correr_tests(cuerpo: CuerpoTests):
+        """`pytest -q` en subproceso, con timeout. La página pinta verde o rojo."""
+        import subprocess
+        import sys
+
+        proceso = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", cuerpo.ruta],
+            cwd=RAIZ_REPO, capture_output=True, text=True, timeout=TIMEOUT_TESTS,
+        )
+        salida = proceso.stdout + proceso.stderr
+        return {"exito": proceso.returncode == 0, "salida": salida[-8000:]}
 
     return app

@@ -274,3 +274,36 @@ def test_los_clocks_se_listan(taller):
     })
     clocks = taller.get("/clocks?mundo=taberna").json()
     assert clocks[0]["id"] == "amenaza" and clocks[0]["estado"] == "activo"
+
+
+# ----- Zona Templates y tests -----
+
+def test_editar_un_template_permitido(taller, tmp_path, monkeypatch):
+    import taller.app as modulo_app
+    carpeta = tmp_path / "templates"
+    carpeta.mkdir()
+    (carpeta / "mutacion.txt").write_text("versión vieja $receptor_id", encoding="utf-8")
+    monkeypatch.setattr(modulo_app, "CARPETA_TEMPLATES", carpeta)
+
+    assert "vieja" in taller.get("/templates/mutacion").json()["texto"]
+
+    r = taller.put("/templates/mutacion", json={"texto": "versión nueva $receptor_id"})
+    assert r.status_code == 200
+    assert (carpeta / "mutacion.txt").read_text(encoding="utf-8") == "versión nueva $receptor_id"
+
+
+def test_solo_los_dos_templates_del_motor(taller):
+    assert taller.get("/templates/otro").status_code == 404
+    assert taller.put("/templates/passwd", json={"texto": "x"}).status_code == 404
+
+
+def test_correr_una_suite_de_pytest(taller, tmp_path):
+    (tmp_path / "test_trivial.py").write_text(
+        "def test_pasa():\n    assert True\n", encoding="utf-8"
+    )
+
+    r = taller.post("/tests", json={"ruta": str(tmp_path / "test_trivial.py")})
+
+    assert r.status_code == 200
+    assert r.json()["exito"] is True
+    assert "1 passed" in r.json()["salida"]
