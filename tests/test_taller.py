@@ -19,14 +19,30 @@ def _encoder(textos):
     return [np.asarray(VECTORES.get(t, [0.5, 0.5]), dtype=np.float32) for t in textos]
 
 
+class DadosCargables:
+    """RNG guionable desde cada test (regla 5): se le cargan los dados que saldrán."""
+
+    def __init__(self):
+        self._dados = []
+
+    def cargar(self, dados):
+        self._dados.extend(dados)
+
+    def randint(self, a, b):
+        assert self._dados, "el test no cargó dados suficientes"
+        return self._dados.pop(0)
+
+
 @pytest.fixture()
 def taller(tmp_path):
-    """Un taller limpio sobre una carpeta de mundos vacía, con LLM guionable."""
+    """Un taller limpio sobre una carpeta de mundos vacía, con LLM y dados guionables."""
     cliente = MockClient(respuesta_por_defecto="")
+    rng = DadosCargables()
     raiz = tmp_path / "mundos"
-    app = crear_app(raiz_mundos=raiz, cliente_llm=cliente, encoder=_encoder)
+    app = crear_app(raiz_mundos=raiz, cliente_llm=cliente, encoder=_encoder, rng=rng)
     with TestClient(app) as tc:
         tc.cliente_llm = cliente
+        tc.rng = rng
         tc.raiz_mundos = raiz
         yield tc
 
@@ -170,3 +186,91 @@ def test_hecho_duplicado_da_400(taller):
     r = taller.post("/hechos?mundo=taberna", json=HECHO)
     assert r.status_code == 400
     assert "ya existe" in r.json()["detail"]
+
+
+# ----- Zona Probar -----
+
+def _mundo_armado(taller):
+    """Taberna con el tabernero (semilla + hoja) y el hecho del kraken con testigo."""
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    taller.post("/hechos?mundo=taberna", json={**HECHO, "testigo": "el_viejo_tomas"})
+
+
+def test_transmitir_muta_y_queda_en_grafo_y_bitacora(taller):
+    import json as _json
+    _mundo_armado(taller)
+    taller.cliente_llm.respuesta_por_defecto = _json.dumps({
+        "contenido_entendido": "Al viejo Tomás algo le rompió las redes; acá se termina sabiendo todo.",
+        "memes_resonantes": ["oido-fino"],
+    }, ensure_ascii=False)
+
+    r = taller.post("/transmitir?mundo=taberna", json={
+        "emisor_id": "el_viejo_tomas",
+        "receptor_id": "tabernero",
+        "version_id": "kraken-bahia-raiz",
+        "momento": "1850-03-01T09:00:00",
+    })
+
+    assert r.status_code == 200
+    version = r.json()["version"]
+    assert "se termina sabiendo todo" in version["contenido"]
+    assert version["emisor"] == "el_viejo_tomas"
+
+    # Quedó en el árbol del hecho, y el tabernero la conoce.
+    arbol = taller.get("/hechos?mundo=taberna").json()[0]
+    assert len(arbol["versiones"]) == 2
+    assert arbol["versiones"][1]["conocida_por"] == ["tabernero"]
+
+    # Y en la bitácora, para comparar iteraciones después.
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "transmision"
+    assert entradas[0]["ser"] == "tabernero"
+    assert "sabiendo todo" in entradas[0]["salida"]
+
+
+def test_score_sin_clock_da_409(taller):
+    _mundo_armado(taller)
+    r = taller.post("/score/evaluar?mundo=taberna", json={
+        "ser_id": "tabernero", "accion": "escuchar",
+        "descripcion": "Quedarse detrás de la barra oyendo a los pescadores.",
+    })
+    assert r.status_code == 409
+    assert "clock" in r.json()["detail"].lower()
+
+
+def test_score_completo_evaluar_tirar_y_efectos(taller):
+    _mundo_armado(taller)
+    taller.post("/clocks?mundo=taberna", json={
+        "id": "amenaza", "nombre": "El mar se enturbia", "segmentos_total": 6,
+    })
+    taller.cliente_llm.respuesta_por_defecto = "El tabernero escucha más de lo que quisiera."
+    taller.rng.cargar([1, 2, 3, 1])   # 3 del rango + 1 del empuje → manda el 3: mala
+
+    ev = taller.post("/score/evaluar?mundo=taberna", json={
+        "ser_id": "tabernero", "accion": "escuchar",
+        "descripcion": "Quedarse detrás de la barra oyendo a los pescadores.",
+    })
+    assert ev.status_code == 200
+    terminos = ev.json()
+    assert terminos["evaluacion"]["dados"] == 3            # el rango de "escuchar"
+
+    r = taller.post("/score/tirar?mundo=taberna", json={**terminos, "empuje": "dado_extra"})
+    assert r.status_code == 200
+    res = r.json()
+    assert res["resolucion"]["categoria"] == "mala_consecuencia"
+    assert res["narracion"] == "El tabernero escucha más de lo que quisiera."
+    assert res["stress"] == 2.0                            # pagó el empuje
+    assert res["clock"]["segmentos_actuales"] == 1         # la amenaza avanzó
+
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "score"
+
+
+def test_los_clocks_se_listan(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/clocks?mundo=taberna", json={
+        "id": "amenaza", "nombre": "El mar se enturbia", "segmentos_total": 6,
+    })
+    clocks = taller.get("/clocks?mundo=taberna").json()
+    assert clocks[0]["id"] == "amenaza" and clocks[0]["estado"] == "activo"

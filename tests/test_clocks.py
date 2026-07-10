@@ -32,6 +32,16 @@ def test_segmentos_totales_solo_los_de_blades():
         Clock(id="x", nombre="x", segmentos_total=5)
 
 
+def test_cargar_todos_los_clocks(tmp_path):
+    p = Persistencia(tmp_path / "mundo")
+    assert p.cargar_clocks() == []
+
+    p.guardar_clock(AMENAZA)
+    p.guardar_clock(Clock(id="reputacion", nombre="La reputación del loco", segmentos_total=4))
+
+    assert [c.id for c in p.cargar_clocks()] == ["mar-enturbiado", "reputacion"]
+
+
 def test_el_clock_persiste_por_la_puerta_unica(tmp_path):
     p = Persistencia(tmp_path / "mundo")
     assert p.cargar_clock("mar-enturbiado") is None

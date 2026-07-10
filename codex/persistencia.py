@@ -269,6 +269,11 @@ class Persistencia:
         ).fetchone()
         return Clock(**dict(fila)) if fila else None
 
+    def cargar_clocks(self) -> list[Clock]:
+        """Todos los clocks del mundo (también los completados: son memoria)."""
+        filas = self._conn.execute("SELECT * FROM clocks ORDER BY rowid").fetchall()
+        return [Clock(**dict(f)) for f in filas]
+
     # ----- Caché de embeddings -----
 
     def leer_vector(self, texto_hash: str) -> bytes | None:
