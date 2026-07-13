@@ -1,0 +1,13 @@
+{
+  "ser_id": "el_que_no_muere",
+  "stress_max": 25,
+  "acciones": {
+    "rastreaar": 4,
+    "pelear": 4,
+    "Sobrevivir en la naturaleza": 4,
+    "navegar": 4,
+    "Truco de manos": 4,
+    "Pescar": 4,
+    "Persuadir con la verdad": 4
+  }
+}

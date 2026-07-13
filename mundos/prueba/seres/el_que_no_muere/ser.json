@@ -1,0 +1,55 @@
+{
+  "ser_id": "el_que_no_muere",
+  "mana_max": 70,
+  "memes": [
+    {
+      "id": "el olvido",
+      "tipo": "operativo",
+      "texto": "mi memoria es finita, es como un libro de paginas limitadas, que con el tiempo debo borrar para poder sumar recuerdos nuevos",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "conosco esta tierra, es mi cuerpo",
+      "tipo": "operativo",
+      "texto": "conosco cada rincon de mis tierras, sus tiempos y sus humores",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "Los Dioses existen",
+      "tipo": "fundacional",
+      "texto": "Los Dioses existen, y son terribles.",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "El bien existe",
+      "tipo": "fundacional",
+      "texto": "El bien existe, si se lo  cultiva.",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "Solo Existo aqui",
+      "tipo": "fundacional",
+      "texto": "No puedo dejar estas tierras, y no recuerdo por que",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "El hombre es bueno,, pero si se lo vigila es mejor",
+      "tipo": "experimental",
+      "texto": "El hombre es bueno, pero si se lo vigila es mejor",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    }
+  ],
+  "origen": "es un hombre antiguo, atado a las costas donde habita el kraken dios carnicero de los hombres pescado."
+}

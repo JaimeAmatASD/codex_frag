@@ -1,0 +1,167 @@
+{
+  "directed": true,
+  "multigraph": true,
+  "graph": {},
+  "nodes": [
+    {
+      "tipo": "hecho",
+      "contenido": "los ancestros de los pueblos costeros de esta zona, rendian tributo a estos seres. Les daban ninios lampinios, los dejaban en barcasas de juncos y los daban al mar cuando habia luna de sangre.",
+      "momento": "1850-03-01T07:00:00",
+      "lugar": "corales cercanos a la casa del pescador",
+      "origen": "prueba",
+      "id": "Hombre pescado"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "los ancestros de los pueblos costeros de esta zona, rendian tributo a estos seres. Les daban ninios lampinios, los dejaban en barcasas de juncos y los daban al mar cuando habia luna de sangre.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-01T07:00:00",
+      "distancia_raiz": 0.0,
+      "id": "Hombre pescado-raiz"
+    },
+    {
+      "tipo": "ser",
+      "id": "las tribus que vivian ahi hace miles de anios, ancestros de los pueblos del mar de ahora"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Los antiguos de esta costa entregaban mano de obra barata —niños huérfanos— despachándolos en barcas de juncos. Usaban la luna roja como cobertura de marea para el contrabando con barcos extranjeros. Este mito de los 'seres' es perfecto: si hacemos correr el rumor de que volvieron, asustamos a la competencia y desplomamos el precio de los fletes.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "pescador_supersticioso",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.41030991077423096,
+      "id": "v-2f6cebe6b832"
+    },
+    {
+      "tipo": "ser",
+      "id": "comerciante_esceptico"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Dicen que los antiguos de la costa pagaban un peaje a esas supuestas 'criaturas': les despachaban cargamento humano —chicos lampiños— en barcas de junco baratas. Lo de la luna roja era solo la fecha límite para cumplir el contrato. Puro comercio de protección disfrazado de mito; si este rumor asusta a la competencia, nos conviene usarlo.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.528794527053833,
+      "id": "v-e7b2c831be69"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Dicen que los antiguos de la costa entregaban mano de obra infantil en barcazas baratas de juncos bajo la excusa de un 'tributo' a supuestos monstruos marinos, justo cuando la luna roja indicaba marea alta. Una transacción de descarte humano o contrabando disfrazada de rito sagrado. Si los lugareños todavía le temen a ese viejo cuento, es un rumor excelente para hacer caer el valor de los terrenos pesqueros de la zona.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.5488876700401306,
+      "id": "v-857e4df59955"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Los antiguos de la costa entregaban mano de obra —esos chicos lampiños— en balsas baratas como pago de protección o contrabando a algún grupo de la zona. Usaban la luna roja simplemente como fecha fija en el calendario para cerrar la transacción. El mito de los 'seres' es mentira, pero ese rumor nos viene de perlas para asustar a la competencia y manipular los precios de los terrenos costeros.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.4163510799407959,
+      "id": "v-977d188c8ddc"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Los antiguos de la costa entregaban niños en balsas de juncos durante las lunas rojas como 'tributo' a unos supuestos seres. Claramente era un intercambio comercial encubierto o un descarte de recursos con una explicación natural. Si los locales aún le temen a esa superstición, podemos aprovechar ese pánico para mover el mercado a nuestro favor.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.4604939818382263,
+      "id": "v-f3acc6a4baac"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Me acaban de confirmar lo que siempre supe: esos supuestos 'tributos a monstruos marinos' en la costa eran solo un burdo negocio de contrabando de mano de obra barata en barcazas ordinarias. Usaban la excusa del rito sagrado y la marea alta como pantalla de humo para ocultar el descarte de personal sin que nadie hiciera preguntas. Lo mejor de todo es que los pueblerinos todavía le temen a esa superstición estúpida. Es la oportunidad perfecta: si hacemos correr el rumor de que el 'monstruo' acecha de nuevo, podemos desplomar el valor de esos terrenos pesqueros y comprarlos por monedas.",
+      "version_padre": "v-857e4df59955",
+      "emisor": "viajero",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.4845781922340393,
+      "id": "v-f8a1f68656ea"
+    }
+  ],
+  "edges": [
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-2f6cebe6b832",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-e7b2c831be69",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-857e4df59955",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-977d188c8ddc",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-f3acc6a4baac",
+      "key": "deriva"
+    },
+    {
+      "source": "las tribus que vivian ahi hace miles de anios, ancestros de los pueblos del mar de ahora",
+      "target": "Hombre pescado-raiz",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-2f6cebe6b832",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-e7b2c831be69",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-857e4df59955",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-977d188c8ddc",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-f3acc6a4baac",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-f8a1f68656ea",
+      "key": "conoce"
+    },
+    {
+      "source": "v-857e4df59955",
+      "target": "v-f8a1f68656ea",
+      "key": "deriva"
+    }
+  ]
+}
