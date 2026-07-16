@@ -89,6 +89,15 @@ def test_mundo_inexistente_da_404(taller):
     assert taller.get("/seres?mundo=no-existe").status_code == 404
 
 
+def test_ser_id_con_ruta_da_400_y_no_escribe_fuera(taller):
+    # El ser_id se vuelve carpeta: "../fuera" escribiría fuera del mundo.
+    taller.post("/mundos", json={"nombre": "taberna"})
+    ser = _ser_tabernero(ser_id="../fuera")
+    r = taller.post("/seres?mundo=taberna", json=ser)
+    assert r.status_code == 400
+    assert not (taller.raiz_mundos / "fuera").exists()
+
+
 # ----- Zona Personajes -----
 
 def _ser_tabernero(**extra):

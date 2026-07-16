@@ -254,6 +254,11 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         datos = cuerpo.model_dump(exclude={"hoja"})
         datos["origen"] = datos["origen"] or mundo    # nativo por default (ADR-007)
         ser = Ser(**datos)                            # valida ANTES de escribir
+        if not NOMBRE_VALIDO.match(ser.ser_id):
+            # El ser_id se vuelve carpeta: sin esto, "../../lo-que-sea" escribe fuera del mundo.
+            raise HTTPException(
+                400, "El ser_id lleva solo letras, números, guiones y guión bajo."
+            )
         hoja = HojaMecanica(**{**{"ser_id": ser.ser_id}, **(cuerpo.hoja or {})}) if cuerpo.hoja is not None else None
 
         carpeta = p.carpeta_seres / ser.ser_id

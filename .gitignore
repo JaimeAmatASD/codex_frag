@@ -5,3 +5,5 @@ __pycache__/
 # Estado de los mundos: se genera en runtime, no se versiona.
 mundos/**/estado.db
 .fastembed_cache/
+# Artefacto de build de pip install -e: se regenera solo.
+*.egg-info/
