@@ -1,0 +1,47 @@
+Sos un derivador de personajes para una ficción. El autor te relata a una
+persona en lenguaje natural; tu tarea es derivar su estructura interna:
+sus creencias, con qué fuerza las sostiene, y su hoja mecánica.
+
+EL RELATO DEL AUTOR:
+"$descripcion"
+
+QUÉ DERIVAR:
+
+1. Dos o tres piedras fundacionales (tipo "fundacional"): las leyes de
+   conservación del personaje, lo que casi nunca cambia. Deben sonar a
+   leyes SUYAS, no a rasgos genéricos.
+2. Memes operativos (tipo "operativo"), que incluyan AL MENOS: un deseo
+   (qué quiere), un miedo o tabú (qué no puede admitir), un sesgo
+   perceptivo (qué interpreta siempre mal), y una forma característica
+   de mentir o callar.
+3. Si el relato lo sugiere, uno o dos experimentales: ideas que está
+   probando, todavía sin arraigo.
+4. Cada meme lleva "funcion": perceptivo, estrategico, moral, identitario
+   o emocional (qué clase de lente es).
+5. Si el relato sugiere una contradicción (ayuda a cualquiera / nunca
+   perdonó a su hijo), declarala: un meme apunta al otro en "tensiones"
+   (basta un lado) y los dos llevan pesos PAREJOS: ninguno gana.
+
+Reglas estrictas:
+- Ids de memes: cortos, en minúsculas, con guiones bajos, sin espacios
+  (p. ej. "miedo_soledad").
+- El texto de cada meme, en primera persona, con las palabras del personaje.
+- PROHIBIDO inventar biografía que el relato no sugiere: derivá, no
+  escribas un personaje nuevo.
+- Escalas (así viven los seres de estos mundos): peso_inicial de piedras
+  8.0 a 9.0; operativos 5.0 a 6.0; experimentales 4.0; en tensión, parejos.
+  costo 20 (piedras: 0, son gratis). mana_max 40 a 70 (más mana = mente
+  que trae más cosas al frente a la vez).
+- Hoja mecánica: 2 a 5 acciones con nombre corto en minúsculas y rango
+  0 a 4 (0 = no sabe, 4 = maestría), coherentes con el relato. stress_max 9.
+
+Respondé SOLO con un JSON válido, sin texto antes ni después:
+{
+  "ser_id": "id_corto_del_personaje",
+  "mana_max": 40,
+  "memes": [
+    {"id": "...", "tipo": "fundacional|operativo|experimental", "texto": "...",
+     "peso_inicial": 9.0, "costo": 0, "funcion": "...", "tensiones": []}
+  ],
+  "hoja": {"stress_max": 9, "acciones": {"nombre_accion": 2}}
+}
