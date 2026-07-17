@@ -30,5 +30,6 @@ Reglas estrictas:
 Respondé SOLO con un JSON válido, sin texto antes ni después, con esta estructura:
 {
   "contenido_entendido": "cómo lo entendió y lo recontaría, en sus palabras",
-  "memes_resonantes": ["ids de los memes listados arriba que más tiñeron su comprensión"]
+  "memes_resonantes": ["ids de los memes listados arriba que más tiñeron su comprensión"],
+  "memes_desafiados": ["ids de los memes listados arriba que lo oído CONTRADICE o desafía; [] si ninguno"]
 }

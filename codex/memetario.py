@@ -85,6 +85,7 @@ class Memetario:
                     veces_movilizado=est.veces_movilizado if est else 0,
                     tensiones=meme.tensiones,
                     funcion=meme.funcion,
+                    aprendizaje=meme.aprendizaje,
                 )
             )
         return vivos

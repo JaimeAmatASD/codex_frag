@@ -30,6 +30,15 @@ class TipoMeme(str, Enum):
 # que mide estabilidad (una PF puede ser moral; un experimental, perceptivo).
 FuncionMeme = Literal["perceptivo", "estrategico", "moral", "identitario", "emocional"]
 
+# Cómo aprende el meme (mejora 04, EXPERIMENTO — nada de esto está adoptado hasta
+# el veredicto): no todos los memes cambian igual ante la contradicción.
+#   normal        → lo de hoy: refuerzo por uso, decaimiento por ciclo.
+#   se_radicaliza → ser contradicho lo ATRINCHERA: gana peso en vez de debilitarse.
+#   solo_trauma   → ni refuerzos ni contradicciones lo mueven (el trauma que sí
+#                   podría moverlo es territorio de las crisis, no de este paso).
+#   se_erosiona   → cada contradicción lo decae rápido, más que el ciclo normal.
+PoliticaAprendizaje = Literal["normal", "se_radicaliza", "solo_trauma", "se_erosiona"]
+
 # Cómo se anota cada función junto al meme en los prompts (la lente es femenina).
 LENTE_POR_FUNCION = {
     "perceptivo": "lente perceptiva",
@@ -57,6 +66,7 @@ class Meme(BaseModel):
     # si A la declara con B, vale en ambos sentidos aunque B no la declare.
     tensiones: list[str] = Field(default_factory=list)
     funcion: FuncionMeme | None = None
+    aprendizaje: PoliticaAprendizaje = "normal"
 
 
 class Ser(BaseModel):
@@ -100,6 +110,7 @@ class MemeVivo(BaseModel):
     veces_movilizado: int = 0
     tensiones: list[str] = Field(default_factory=list)
     funcion: str | None = None
+    aprendizaje: PoliticaAprendizaje = "normal"
 
 
 class TensionInterna(BaseModel):

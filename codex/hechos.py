@@ -57,7 +57,12 @@ class RespuestaMutacion(BaseModel):
 
     `memes_resonantes` son los ids de memes del loadout del receptor que tiñeron su
     comprensión: los "movilizados" de la regla 4. Los ids que no estén en el loadout
-    se descartan con log en la transmisión."""
+    se descartan con log en la transmisión.
+
+    `memes_desafiados` (mejora 04, experimento) son los memes del loadout que lo
+    oído CONTRADICE o desafía: alimentan la política de aprendizaje de cada meme
+    (radicalizarse, erosionarse). Mismo trato: fuera del loadout, se descartan."""
 
     contenido_entendido: str = Field(min_length=1)
     memes_resonantes: list[str] = Field(default_factory=list)
+    memes_desafiados: list[str] = Field(default_factory=list)
