@@ -8,7 +8,9 @@
       "texto": "mi memoria es finita, es como un libro de paginas limitadas, que con el tiempo debo borrar para poder sumar recuerdos nuevos",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "tensiones": ["conosco esta tierra, es mi cuerpo"],
+      "funcion": "identitario"
     },
     {
       "id": "conosco esta tierra, es mi cuerpo",
@@ -16,7 +18,8 @@
       "texto": "conosco cada rincon de mis tierras, sus tiempos y sus humores",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "funcion": "perceptivo"
     },
     {
       "id": "Los Dioses existen",
