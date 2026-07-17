@@ -43,6 +43,7 @@ from codex.reglas import (
 from codex.reloj import RelojSimple
 from codex.transmision import transmitir
 from taller import bitacora
+from taller.derivacion import derivar_ser
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ TEMPLATES_EDITABLES = {
     "mutacion": "mutacion.txt",
     "narracion_score": "narracion_score.txt",
     "tension": "tension.txt",
+    "derivar_ser": "derivar_ser.txt",
 }
 CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
@@ -84,6 +86,10 @@ class CuerpoSer(BaseModel):
     mana_max: int
     memes: list[dict]
     hoja: dict | None = None
+
+
+class CuerpoDerivar(BaseModel):
+    descripcion: str
 
 
 class CuerpoTransmitir(BaseModel):
@@ -277,6 +283,26 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             )
         Memetario(ser, p)   # siembra el estado vivo inicial (INSERT OR IGNORE)
         return {"ok": True}
+
+    @app.post("/seres/derivar")
+    def derivar(cuerpo: CuerpoDerivar, p: Persistencia = Depends(dep_persistencia)):
+        """Relatás al personaje y el LLM propone el ser completo. La propuesta
+        CAE EN EL FORMULARIO, nunca se guarda sola: la curaduría es el punto."""
+        if not cuerpo.descripcion.strip():
+            raise HTTPException(400, "El relato está vacío: contá quién es.")
+        propuesta, reintento = derivar_ser(_cliente(), cuerpo.descripcion)
+        if propuesta is None:
+            raise HTTPException(
+                422, "No pude derivar un ser válido de ese relato: probá reformular la descripción."
+            )
+        bitacora.registrar(p.carpeta, {
+            "tipo": "derivacion",
+            "ser": propuesta.ser_id,
+            "entrada": cuerpo.descripcion,
+            "salida": json.dumps(propuesta.model_dump(), ensure_ascii=False),
+            "terminos": {"reintento": reintento},
+        })
+        return {"propuesta": propuesta.model_dump(), "reintento": reintento}
 
     # ----- Zona Lore -----
 

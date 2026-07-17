@@ -162,6 +162,46 @@ def test_ser_invalido_da_400_con_mensaje_legible(taller):
     assert "tipo" in r.json()["detail"]
 
 
+def test_derivar_propone_sin_tocar_disco(taller):
+    import json as _json
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.cliente_llm.respuesta_por_defecto = _json.dumps({
+        "ser_id": "veterinario",
+        "mana_max": 40,
+        "memes": [
+            {"id": "pf_ayudar", "tipo": "fundacional", "texto": "Ningún ser que sufre me es ajeno.",
+             "peso_inicial": 9.0, "costo": 0, "funcion": "moral", "tensiones": ["no_perdono"]},
+            {"id": "no_perdono", "tipo": "operativo", "texto": "Lo que mi hijo hizo no tiene perdón.",
+             "peso_inicial": 8.5, "costo": 20, "funcion": "emocional"},
+        ],
+        "hoja": {"stress_max": 9, "acciones": {"curar": 4}},
+    }, ensure_ascii=False)
+
+    r = taller.post("/seres/derivar?mundo=taberna", json={"descripcion": "un veterinario de 62 años"})
+
+    assert r.status_code == 200
+    propuesta = r.json()["propuesta"]
+    assert propuesta["ser_id"] == "veterinario"
+    assert propuesta["memes"][0]["tensiones"] == ["no_perdono"]
+    # NADA en disco: la propuesta se cura en el formulario, no se guarda sola.
+    assert not (taller.raiz_mundos / "taberna" / "seres" / "veterinario").exists()
+    # La bitácora registró la derivación (material de calibración del template).
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "derivacion"
+    assert entradas[0]["terminos"]["reintento"] is False
+
+
+def test_derivar_degrada_con_mensaje_claro_y_sin_guardar(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.cliente_llm.respuesta_por_defecto = "esto nunca va a ser un JSON"
+
+    r = taller.post("/seres/derivar?mundo=taberna", json={"descripcion": "alguien"})
+
+    assert r.status_code == 422
+    assert "reformular" in r.json()["detail"]
+    assert taller.get("/bitacora?mundo=taberna").json() == []
+
+
 # ----- Zona Lore -----
 
 HECHO = {
