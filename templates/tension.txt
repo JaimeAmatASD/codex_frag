@@ -1,0 +1,3 @@
+Ahora mismo hay una grieta en él: cree a la vez que «$texto_a» y que
+«$texto_b», y las dos cosas tiran para lados distintos. Esa tensión debe
+notarse en $donde, sin resolverse mágicamente: ninguna de las dos gana.

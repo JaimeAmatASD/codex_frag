@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from .llm import ClienteLLM, ErrorLLM
 from .modelos import TipoMeme
+from .prompts import anotar_funcion, seccion_tension
 from .reglas import (
     AccionDeclarada,
     AvanzarClock,
@@ -45,6 +46,8 @@ from .reglas import (
 logger = logging.getLogger(__name__)
 
 TEMPLATE_NARRACION = Path(__file__).parent.parent / "templates" / "narracion_score.txt"
+# En el Score, la grieta debe notarse acá (el $donde de templates/tension.txt).
+DONDE_TENSION = "qué nota, qué teme y cómo actúa"
 
 # La categoría le llega al LLM como rúbrica EXPLÍCITA: sin esto tiende a narrar
 # éxitos limpios siempre, porque es lo más cómodo de escribir (tiradas.md).
@@ -224,8 +227,11 @@ def narrar_resolucion(cliente: ClienteLLM, resolucion: Resolucion, contexto: Con
         posicion=ev.posicion.value,
         efecto=ev.efecto.value,
         rubrica=_RUBRICAS[resolucion.categoria],
-        pf="\n".join(f"- {m.texto}" for m in pf) or "- (ninguna)",
-        memes_activos="\n".join(f"- {m.texto}" for m in activos) or "- (ninguno)",
+        pf="\n".join(f"- {m.texto}{anotar_funcion(m)}" for m in pf) or "- (ninguna)",
+        memes_activos="\n".join(
+            f"- {m.texto}{anotar_funcion(m)}" for m in activos
+        ) or "- (ninguno)",
+        tension=seccion_tension(contexto.loadout.tensiones, DONDE_TENSION),
     )
     try:
         narracion = cliente.responder(prompt).strip()

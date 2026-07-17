@@ -19,10 +19,10 @@ from codex.grafo_mundo import GrafoMundo
 from codex.hechos import DISTANCIA_NO_MEDIDA, Hecho
 from codex.llm import ErrorLLM, MockClient
 from codex.memetario import Memetario
-from codex.modelos import Ser
+from codex.modelos import Loadout, MemeVivo, Ser, TensionInterna
 from codex.persistencia import Persistencia
 from codex.reloj import RelojSimple
-from codex.transmision import transmitir
+from codex.transmision import armar_prompt, transmitir
 
 SERES_DIR = Path(__file__).parent.parent / "mundos" / "prueba" / "seres"
 
@@ -203,3 +203,45 @@ def test_memes_resonantes_fuera_del_loadout_se_descartan(tmp_path, caplog):
     assert any("fuera del loadout" in r.message for r in caplog.records)
     estado = p.leer_estado("pescador_supersticioso")
     assert all(e.veces_movilizado == 0 for e in estado.values())
+
+
+# ----- La grieta en el prompt de mutación -----
+
+def _loadout_partido(tensiones):
+    seleccionados = [
+        MemeVivo(id="PF-familia", tipo="fundacional", texto="Nunca abandones a tu familia.",
+                 costo=0, peso=9.0),
+        MemeVivo(id="deber", tipo="operativo", texto="El deber está por encima de todo.",
+                 costo=0, peso=8.0, funcion="moral"),
+    ]
+    return Loadout(ser_id="partido", seleccionados=seleccionados, mana_usado=0,
+                   tensiones=tensiones)
+
+
+def test_prompt_con_tension_muestra_la_grieta():
+    grieta = TensionInterna(
+        meme_a="PF-familia", meme_b="deber",
+        texto_a="Nunca abandones a tu familia.",
+        texto_b="El deber está por encima de todo.",
+        intensidad=8.0 / 9.0,
+    )
+    prompt = armar_prompt("partido", "un_testigo", "algo pasó", _loadout_partido([grieta]))
+
+    assert "grieta" in prompt
+    assert "Nunca abandones a tu familia." in prompt
+    assert "cómo entiende lo que oyó" in prompt   # el $donde de la mutación
+
+
+def test_prompt_sin_tension_no_deja_residuo():
+    prompt = armar_prompt("partido", "un_testigo", "algo pasó", _loadout_partido([]))
+
+    assert "grieta" not in prompt
+    assert "$tension" not in prompt
+
+
+def test_prompt_anota_la_funcion_del_meme():
+    prompt = armar_prompt("partido", "un_testigo", "algo pasó", _loadout_partido([]))
+
+    assert "El deber está por encima de todo. (lente moral)" in prompt
+    # La PF no declara función: su línea queda como siempre.
+    assert "Nunca abandones a tu familia. (" not in prompt

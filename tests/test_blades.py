@@ -203,6 +203,34 @@ def test_la_narracion_recibe_la_categoria_explicita():
     assert "PF-mar" in prompt                   # el cristal del ser tiñe la narración
 
 
+def test_la_narracion_lleva_la_grieta_si_el_cristal_esta_en_tension():
+    from codex.modelos import TensionInterna
+
+    blades = _blades(dados=(6, 5))
+    ctx = _contexto(CRISTAL_NEUTRO)
+    ctx.loadout.tensiones = [TensionInterna(
+        meme_a="PF-mar", meme_b="leer-aguas",
+        texto_a="PF-mar", texto_b="leer-aguas", intensidad=1.0,
+    )]
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+    cliente = MockClient(respuestas=["Zarpa."])
+
+    narrar_resolucion(cliente, r, ctx)
+
+    prompt = cliente.llamadas[0]
+    assert "grieta" in prompt
+    assert "qué nota, qué teme y cómo actúa" in prompt   # el $donde del Score
+
+    # Sin tensiones, ni rastro.
+    blades_sin = _blades(dados=(6, 5))
+    ctx_sin = _contexto(CRISTAL_NEUTRO)
+    cliente_sin = MockClient(respuestas=["Zarpa."])
+    narrar_resolucion(
+        cliente_sin, blades_sin.tirar(blades_sin.evaluar(ACCION, ctx_sin), ctx_sin), ctx_sin
+    )
+    assert "grieta" not in cliente_sin.llamadas[0]
+
+
 def test_sin_llm_el_resultado_queda_dicho_igual(caplog):
     """ADR-005: si el LLM falla, el Score no se pierde — queda la crónica mecánica
     del resultado, con log. La tirada ya ocurrió y sus efectos son reales."""

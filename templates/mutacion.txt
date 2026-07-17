@@ -9,7 +9,7 @@ $pf
 
 Lo que su mente trajo al frente al oír esto (sus memes activos ahora):
 $memes_activos
-
+$tension
 LO QUE OYÓ, contado por $emisor_id:
 "$contenido_oido"
 

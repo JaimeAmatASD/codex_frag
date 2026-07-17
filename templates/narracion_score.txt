@@ -9,7 +9,7 @@ $pf
 
 Lo que su mente trajo al frente en este momento (sus memes activos):
 $memes_activos
-
+$tension
 LO QUE INTENTA (declarado por el jugador):
 "$descripcion"
 

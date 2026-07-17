@@ -33,12 +33,15 @@ from .llm import ClienteLLM, ErrorLLM
 from .loadout import Loadout, calcular_loadout
 from .memetario import Memetario
 from .modelos import TipoMeme
+from .prompts import anotar_funcion, seccion_tension
 from .reloj import RelojDelMundo
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_MUTACION = Path(__file__).parent.parent / "templates" / "mutacion.txt"
 INTENTOS = 2  # el original + un reintento con feedback; después se degrada.
+# En la mutación, la grieta debe notarse acá (el $donde de templates/tension.txt).
+DONDE_TENSION = "cómo entiende lo que oyó y cómo lo recuenta"
 
 
 def armar_prompt(receptor_id: str, emisor_id: str, contenido_oido: str, loadout: Loadout) -> str:
@@ -53,8 +56,11 @@ def armar_prompt(receptor_id: str, emisor_id: str, contenido_oido: str, loadout:
         receptor_id=receptor_id,
         emisor_id=emisor_id,
         contenido_oido=contenido_oido,
-        pf="\n".join(f"- {m.texto}" for m in pf) or "- (ninguna)",
-        memes_activos="\n".join(f"- [{m.id}] {m.texto}" for m in activos) or "- (ninguno)",
+        pf="\n".join(f"- {m.texto}{anotar_funcion(m)}" for m in pf) or "- (ninguna)",
+        memes_activos="\n".join(
+            f"- [{m.id}] {m.texto}{anotar_funcion(m)}" for m in activos
+        ) or "- (ninguno)",
+        tension=seccion_tension(loadout.tensiones, DONDE_TENSION),
     )
 
 
@@ -99,16 +105,21 @@ def transmitir(
     cliente: ClienteLLM,
     reloj: RelojDelMundo,
     bias: Callable[[TipoMeme], float] | None = None,
+    loadout: Loadout | None = None,
 ) -> Version:
     """Un ser le cuenta una versión a otro. Devuelve la versión que el receptor guardó.
 
     `version` es la versión que el emisor conoce y cuenta (puede ser la raíz, si el
     emisor fue testigo). El refuerzo de pesos NO ocurre acá: la transmisión registra
-    activaciones (regla 4) y el decaimiento/refuerzo siguen siendo ciclos aparte."""
+    activaciones (regla 4) y el decaimiento/refuerzo siguen siendo ciclos aparte.
+
+    `loadout` permite pasar un cristal ya calculado (el Taller lo usa para mostrar
+    las tensiones de la escucha); si viene None se calcula acá, como siempre."""
     contenido_oido = version.contenido
 
     # El cristal con el que el receptor escucha: su loadout ante lo que oye.
-    loadout = calcular_loadout(receptor, contenido_oido, embeddings, bias=bias)
+    if loadout is None:
+        loadout = calcular_loadout(receptor, contenido_oido, embeddings, bias=bias)
 
     prompt = armar_prompt(receptor.ser.ser_id, emisor_id, contenido_oido, loadout)
     respuesta = _pedir_mutacion(cliente, prompt)
