@@ -1,0 +1,31 @@
+{
+  "ser_id": "hombre_loco",
+  "mana_max": 40,
+  "memes": [
+    {
+      "id": "a",
+      "tipo": "fundacional",
+      "texto": "todo esto es mentira",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "b",
+      "tipo": "fundacional",
+      "texto": "esta no es mi tierra",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    },
+    {
+      "id": "c",
+      "tipo": "fundacional",
+      "texto": "estoy atrapado en un cuento",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": []
+    }
+  ],
+  "origen": "buenos aires argentina"
+}

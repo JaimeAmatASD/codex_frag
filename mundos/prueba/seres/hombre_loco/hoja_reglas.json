@@ -1,0 +1,8 @@
+{
+  "ser_id": "hombre_loco",
+  "stress_max": 9,
+  "acciones": {
+    "escribir": 2,
+    "ingeniero": 3
+  }
+}

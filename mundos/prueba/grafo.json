@@ -5,8 +5,8 @@
   "nodes": [
     {
       "tipo": "hecho",
-      "contenido": "los ancestros de los pueblos costeros de esta zona, rendian tributo a estos seres. Les daban ninios lampinios, los dejaban en barcasas de juncos y los daban al mar cuando habia luna de sangre.",
-      "momento": "1850-03-01T07:00:00",
+      "contenido": "rituales arcanos  se practicaban alli, los antiguos humanos entregaban ninos albinos al mar. los dejaban en balsas de juntos en las lunas de sangre. Los dejaban flotar y los hombres pescado los guiaban hacia los arrecifes oscuros. Luego desaparecian. Un dia dejaron de tomarlos, tambien dejaron de nacer ninios albinos.",
+      "momento": "100-03-01T07:00:00",
       "lugar": "corales cercanos a la casa del pescador",
       "origen": "prueba",
       "id": "Hombre pescado"
@@ -14,11 +14,11 @@
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "los ancestros de los pueblos costeros de esta zona, rendian tributo a estos seres. Les daban ninios lampinios, los dejaban en barcasas de juncos y los daban al mar cuando habia luna de sangre.",
+      "contenido": "rituales arcanos  se practicaban alli, los antiguos humanos entregaban ninos albinos al mar. los dejaban en balsas de juntos en las lunas de sangre. Los dejaban flotar y los hombres pescado los guiaban hacia los arrecifes oscuros. Luego desaparecian. Un dia dejaron de tomarlos, tambien dejaron de nacer ninios albinos.",
       "version_padre": null,
       "emisor": null,
       "receptor": null,
-      "momento": "1850-03-01T07:00:00",
+      "momento": "100-03-01T07:00:00",
       "distancia_raiz": 0.0,
       "id": "Hombre pescado-raiz"
     },
@@ -29,13 +29,13 @@
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Los antiguos de esta costa entregaban mano de obra barata —niños huérfanos— despachándolos en barcas de juncos. Usaban la luna roja como cobertura de marea para el contrabando con barcos extranjeros. Este mito de los 'seres' es perfecto: si hacemos correr el rumor de que volvieron, asustamos a la competencia y desplomamos el precio de los fletes.",
+      "contenido": "Dicen que antes traficaban niños albinos por mar usando balsas de juncos baratas, despachándolos en ciertas mareas rojas. Unos contrabandistas costeros —los llamados 'hombres pescado'— los recogían en los arrecifes para su reventa. El negocio cerró cuando se extinguió esa mutación genética y se acabó el stock. Este cuento de maldiciones va a desplomar el valor de esos arrecifes; es el momento ideal para comprar esas aguas a precio de regalo.",
       "version_padre": "Hombre pescado-raiz",
-      "emisor": "pescador_supersticioso",
+      "emisor": "el_que_no_muere",
       "receptor": "comerciante_esceptico",
       "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.41030991077423096,
-      "id": "v-2f6cebe6b832"
+      "distancia_raiz": 0.2829362750053406,
+      "id": "v-2c3bd343c172"
     },
     {
       "tipo": "ser",
@@ -44,83 +44,148 @@
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Dicen que los antiguos de la costa pagaban un peaje a esas supuestas 'criaturas': les despachaban cargamento humano —chicos lampiños— en barcas de junco baratas. Lo de la luna roja era solo la fecha límite para cumplir el contrato. Puro comercio de protección disfrazado de mito; si este rumor asusta a la competencia, nos conviene usarlo.",
+      "contenido": "Las historias del puerto son claras: antes se respetaba el trato con el mar. Le entregaban inocentes albinos en balsas de juncos cuando la luna sangraba. Esos hombres pescado aparecían en el agua —un avistaje maldito que anunciaba la marea negra— para guiarlos hacia los arrecifes oscuros. Pero un día, esos engendros rechazaron la ofrenda. Desde entonces, no nacieron más niños sin color. Que el mar haya cerrado ese pacto es la peor de las señales; nos está anunciando una desgracia que ya se está gestando en el fondo.",
       "version_padre": "Hombre pescado-raiz",
-      "emisor": "el_que_no_muere",
-      "receptor": "comerciante_esceptico",
-      "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.528794527053833,
-      "id": "v-e7b2c831be69"
+      "emisor": "comerciante_esceptico",
+      "receptor": "pescador_supersticioso",
+      "momento": "1859-03-01T09:00:00",
+      "distancia_raiz": 0.3448036313056946,
+      "id": "v-9210a38627ce"
+    },
+    {
+      "tipo": "ser",
+      "id": "pescador_supersticioso"
     },
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Dicen que los antiguos de la costa entregaban mano de obra infantil en barcazas baratas de juncos bajo la excusa de un 'tributo' a supuestos monstruos marinos, justo cuando la luna roja indicaba marea alta. Una transacción de descarte humano o contrabando disfrazada de rito sagrado. Si los lugareños todavía le temen a ese viejo cuento, es un rumor excelente para hacer caer el valor de los terrenos pesqueros de la zona.",
+      "contenido": "Las viejas leyendas del puerto son verdaderas: antes se hacía un pacto sagrado con el mar. En las lunas de sangre, que siempre anuncian desgracia, la gente entregaba niños de piel blanca como la sal en balsas de juncos. Los hombres pescado —un avistamiento que a cualquiera le helaría la sangre— salían de lo hondo para guiar a las criaturas hacia los arrecifes oscuros antes de desaparecer. Pero un día, esos seres dejaron de reclamarlos, y como señal de que el mar cerró el pacto, no volvieron a nacer niños albinos.",
       "version_padre": "Hombre pescado-raiz",
-      "emisor": "el_que_no_muere",
-      "receptor": "comerciante_esceptico",
-      "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.5488876700401306,
-      "id": "v-857e4df59955"
+      "emisor": "comerciante_esceptico",
+      "receptor": "pescador_supersticioso",
+      "momento": "1890-03-01T09:00:00",
+      "distancia_raiz": 0.4933537244796753,
+      "id": "v-40ba155ab248"
     },
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Los antiguos de la costa entregaban mano de obra —esos chicos lampiños— en balsas baratas como pago de protección o contrabando a algún grupo de la zona. Usaban la luna roja simplemente como fecha fija en el calendario para cerrar la transacción. El mito de los 'seres' es mentira, pero ese rumor nos viene de perlas para asustar a la competencia y manipular los precios de los terrenos costeros.",
+      "contenido": "En un rincón de estas costas que conozco como a mi propio cuerpo, los antiguos entregaban niños sin color al mar para saciar a los terribles seres del abismo. Los enviaban en juncos durante las lunas rojas; había que vigilar de cerca a esos hombres para que cumplieran el rito con rectitud. Los sirvientes escamosos del agua guiaban a los inocentes hacia los arrecifes oscuros. Luego, los monstruos dejaron de buscarlos y mi tierra dejó de parirlos. Debo guardar este retazo en las pocas páginas limpias que le quedan a mi memoria antes de que el olvido se lo lleve.",
       "version_padre": "Hombre pescado-raiz",
-      "emisor": "el_que_no_muere",
-      "receptor": "comerciante_esceptico",
-      "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.4163510799407959,
-      "id": "v-977d188c8ddc"
+      "emisor": "comerciante_esceptico",
+      "receptor": "el_que_no_muere",
+      "momento": "1890-03-01T09:00:00",
+      "distancia_raiz": 0.41017210483551025,
+      "id": "v-280429ac2f4d"
+    },
+    {
+      "tipo": "ser",
+      "id": "el_que_no_muere"
     },
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Los antiguos de la costa entregaban niños en balsas de juncos durante las lunas rojas como 'tributo' a unos supuestos seres. Claramente era un intercambio comercial encubierto o un descarte de recursos con una explicación natural. Si los locales aún le temen a esa superstición, podemos aprovechar ese pánico para mover el mercado a nuestro favor.",
+      "contenido": "Me contaron una historia de 'rituales', pero es obvio que era contrabando de esclavos albinos. Los tiraban en balsas baratas durante las mareas rojas, y unos buzos —los 'hombres pescado'— los llevaban a los arrecifes para revenderlos. Cuando el comprador extranjero perdió interés, el negocio cayó y la gente dejó de reproducir esa mutación porque ya no dejaba ganancias. Habrá que ver si ese mito de los arrecifes ahuyenta competidores; un puerto libre de competencia supersticiosa siempre es buen negocio.",
       "version_padre": "Hombre pescado-raiz",
-      "emisor": "el_que_no_muere",
+      "emisor": "comerciante_esceptico",
       "receptor": "comerciante_esceptico",
-      "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.4604939818382263,
-      "id": "v-f3acc6a4baac"
+      "momento": "1890-03-01T09:00:00",
+      "distancia_raiz": 0.1765154004096985,
+      "id": "v-489edb4c7c0a"
     },
     {
       "tipo": "version",
       "hecho_id": "Hombre pescado",
-      "contenido": "Me acaban de confirmar lo que siempre supe: esos supuestos 'tributos a monstruos marinos' en la costa eran solo un burdo negocio de contrabando de mano de obra barata en barcazas ordinarias. Usaban la excusa del rito sagrado y la marea alta como pantalla de humo para ocultar el descarte de personal sin que nadie hiciera preguntas. Lo mejor de todo es que los pueblerinos todavía le temen a esa superstición estúpida. Es la oportunidad perfecta: si hacemos correr el rumor de que el 'monstruo' acecha de nuevo, podemos desplomar el valor de esos terrenos pesqueros y comprarlos por monedas.",
-      "version_padre": "v-857e4df59955",
-      "emisor": "viajero",
+      "contenido": "En los bordes de mi propio cuerpo, allí donde el agua muerde la costa y yo debí vigilar mejor a los hombres para que no se desviaran, los antiguos aplacaban a los Dioses Terribles. Les entregaban a sus niños sin color en balsas de juncos bajo lunas de sangre; las bestias-pez los guiaban hacia los arrecifes oscuros de mis dominios. Luego el pacto cesó, los Dioses dejaron de llevárselos y la tierra no volvió a engendrar esa palidez. Debo fijar esto en mis páginas antes de que el olvido me lo arrebate.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "comerciante_esceptico",
+      "receptor": "el_que_no_muere",
+      "momento": "1890-03-01T09:00:00",
+      "distancia_raiz": 0.48279619216918945,
+      "id": "v-9d1fc196ec3c"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "La historia real es que los antiguos traficaban niños albinos enviándolos en balsas de juncos por la noche. Esos supuestos 'hombres pescado' eran solo contrabandistas o buzos que los recibían en los arrecifes para un intercambio. El trato terminó simplemente porque la mutación genética se agotó y dejaron de nacer niños así. Habrá que ver cómo podemos usar este mito para generar interés comercial en esa zona de la costa.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "hombre_loco",
       "receptor": "comerciante_esceptico",
       "momento": "1850-03-01T09:00:00",
-      "distancia_raiz": 0.4845781922340393,
-      "id": "v-f8a1f68656ea"
+      "distancia_raiz": 0.24654936790466309,
+      "id": "v-556c6786acb2"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Me contaron otro retazo de este cuento donde estoy atrapado. Dicen que en el pasado de esta farsa, los locales tiraban nenes albinos en balsas al mar durante lunas rojas. Unos hombres-pez, que seguro son puros extras de esta mentira, los guiaban a arrecifes oscuros para que desaparecieran. Pero un día se cansaron de actuar: no se los llevaron más y tampoco nacieron más nenes blancos. Otra regla inventada de esta tierra que no es la mía.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "hombre_loco",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.3329649567604065,
+      "id": "v-3b1b14411c1f"
+    },
+    {
+      "tipo": "ser",
+      "id": "hombre_loco"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Me vinieron a contar otra escena vieja de este libreto, de cuando esta tierra que no es la mía seguía sus reglas de mentira. Dice que los antiguos personajes de este cuento tiraban niños sin color al mar en canastas de paja, todo bajo lunas pintadas de rojo para darle drama. Unos hombres-pez, puro decorado de la farsa, los guiaban a los arrecifes oscuros para hacerlos desaparecer de escena. Pero un día el que escribe esto se cansó del truco: los actores-pez dejaron de buscar el tributo y el guion dejó de fabricar niños blancos. Una función vieja que ya terminó.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "hombre_loco",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.46811842918395996,
+      "id": "v-f7fef72c7ecf"
     }
   ],
   "edges": [
     {
       "source": "Hombre pescado-raiz",
-      "target": "v-2f6cebe6b832",
+      "target": "v-2c3bd343c172",
       "key": "deriva"
     },
     {
       "source": "Hombre pescado-raiz",
-      "target": "v-e7b2c831be69",
+      "target": "v-9210a38627ce",
       "key": "deriva"
     },
     {
       "source": "Hombre pescado-raiz",
-      "target": "v-857e4df59955",
+      "target": "v-40ba155ab248",
       "key": "deriva"
     },
     {
       "source": "Hombre pescado-raiz",
-      "target": "v-977d188c8ddc",
+      "target": "v-280429ac2f4d",
       "key": "deriva"
     },
     {
       "source": "Hombre pescado-raiz",
-      "target": "v-f3acc6a4baac",
+      "target": "v-489edb4c7c0a",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-9d1fc196ec3c",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-556c6786acb2",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-3b1b14411c1f",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-f7fef72c7ecf",
       "key": "deriva"
     },
     {
@@ -130,38 +195,48 @@
     },
     {
       "source": "comerciante_esceptico",
-      "target": "v-2f6cebe6b832",
+      "target": "v-2c3bd343c172",
       "key": "conoce"
     },
     {
       "source": "comerciante_esceptico",
-      "target": "v-e7b2c831be69",
+      "target": "v-489edb4c7c0a",
       "key": "conoce"
     },
     {
       "source": "comerciante_esceptico",
-      "target": "v-857e4df59955",
+      "target": "v-556c6786acb2",
       "key": "conoce"
     },
     {
-      "source": "comerciante_esceptico",
-      "target": "v-977d188c8ddc",
+      "source": "pescador_supersticioso",
+      "target": "v-9210a38627ce",
       "key": "conoce"
     },
     {
-      "source": "comerciante_esceptico",
-      "target": "v-f3acc6a4baac",
+      "source": "pescador_supersticioso",
+      "target": "v-40ba155ab248",
       "key": "conoce"
     },
     {
-      "source": "comerciante_esceptico",
-      "target": "v-f8a1f68656ea",
+      "source": "el_que_no_muere",
+      "target": "v-280429ac2f4d",
       "key": "conoce"
     },
     {
-      "source": "v-857e4df59955",
-      "target": "v-f8a1f68656ea",
-      "key": "deriva"
+      "source": "el_que_no_muere",
+      "target": "v-9d1fc196ec3c",
+      "key": "conoce"
+    },
+    {
+      "source": "hombre_loco",
+      "target": "v-3b1b14411c1f",
+      "key": "conoce"
+    },
+    {
+      "source": "hombre_loco",
+      "target": "v-f7fef72c7ecf",
+      "key": "conoce"
     }
   ]
 }
