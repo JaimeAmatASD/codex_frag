@@ -62,6 +62,35 @@ def test_conexion_a_meme_inexistente_loguea_y_no_rompe(tmp_path, caplog):
     assert any("fantasma" in r.message for r in caplog.records)
 
 
+def test_las_aristas_del_grafo_saben_si_refuerzan_o_tensionan(tmp_path):
+    datos = {
+        "ser_id": "x", "mana_max": 50,
+        "memes": [
+            {"id": "a", "tipo": "operativo", "texto": "ta", "peso_inicial": 5.0,
+             "conexiones": ["b"], "tensiones": ["c"]},
+            {"id": "b", "tipo": "operativo", "texto": "tb", "peso_inicial": 5.0},
+            {"id": "c", "tipo": "operativo", "texto": "tc", "peso_inicial": 5.0},
+        ],
+    }
+    m = Memetario(Ser(**datos), Persistencia(tmp_path / "mundo"))
+
+    assert m.grafo.edges["a", "b"]["tipo"] == "refuerzo"
+    assert m.grafo.edges["a", "c"]["tipo"] == "tension"
+
+
+def test_tension_a_meme_inexistente_loguea_y_no_rompe(tmp_path, caplog):
+    datos = {
+        "ser_id": "x", "mana_max": 50,
+        "memes": [{"id": "a", "tipo": "operativo", "texto": "t", "peso_inicial": 1.0,
+                   "tensiones": ["fantasma"]}],
+    }
+    with caplog.at_level(logging.WARNING):
+        m = Memetario(Ser(**datos), Persistencia(tmp_path / "mundo"))
+
+    assert ("a", "fantasma") not in m.grafo.edges
+    assert any("fantasma" in r.message for r in caplog.records)
+
+
 def test_ser_viejo_sin_tensiones_ni_funcion_carga_igual():
     # SER_EJEMPLO no declara los campos nuevos: retrocompatibilidad total, sin migración.
     ser = Ser(**SER_EJEMPLO)

@@ -48,13 +48,17 @@ class Memetario:
                 peso_inicial=meme.peso_inicial,
             )
         for meme in ser.memes:
-            for destino in meme.conexiones:
+            # Las dos clases de arista, con su signo: la conexión refuerza, la
+            # tensión parte al medio. Nada las consume aún: quedan para inspección.
+            for destino, tipo in [(d, "refuerzo") for d in meme.conexiones] + [
+                (d, "tension") for d in meme.tensiones
+            ]:
                 if destino in grafo:
-                    grafo.add_edge(meme.id, destino)
+                    grafo.add_edge(meme.id, destino, tipo=tipo)
                 else:
                     logger.warning(
-                        "Conexión a un meme inexistente, se ignora: %s -> %s (ser %s)",
-                        meme.id, destino, ser.ser_id,
+                        "%s a un meme inexistente, se ignora: %s -> %s (ser %s)",
+                        tipo.capitalize(), meme.id, destino, ser.ser_id,
                     )
         return grafo
 
