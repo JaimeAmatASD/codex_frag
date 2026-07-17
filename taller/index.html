@@ -318,6 +318,13 @@ function grietas(tensiones) {
   return (tensiones || []).map(t =>
     `<br><span class="tenue">⚡ grieta: «${esc(t.texto_a)}» ⇄ «${esc(t.texto_b)}»</span>`).join('');
 }
+function pesosMovidos(pesos) {
+  // Experimento 04: si una contradicción movió pesos, el autor lo ve al toque.
+  const entradas = Object.entries(pesos || {});
+  return entradas.length ? `<br><span class="tenue">⚗ pesos que se movieron: ${
+    entradas.map(([id, [a, d]]) => `${esc(id)} ${a.toFixed(1)} → ${d.toFixed(1)}`).join(' · ')
+  }</span>` : '';
+}
 
 /* ---------- mundo ---------- */
 async function cargarMundos() {
@@ -424,6 +431,10 @@ function filaMeme(m = {}) {
       ${['perceptivo','estrategico','moral','identitario','emocional'].map(f =>
         `<option ${m.funcion === f ? 'selected' : ''}>${f}</option>`).join('')}
     </select>
+    <select class="m-aprendizaje" title="cómo aprende ante la contradicción (experimento 04)">
+      ${['normal','se_radicaliza','solo_trauma','se_erosiona'].map(a =>
+        `<option ${(m.aprendizaje || 'normal') === a ? 'selected' : ''}>${a}</option>`).join('')}
+    </select>
     <input placeholder="conexiones (ids, coma)" class="m-conexiones" value="${esc((m.conexiones || []).join(', '))}">
     <input placeholder="tensiones (ids, coma)" class="m-tensiones" title="memes con los que no puede convivir en paz" value="${esc((m.tensiones || []).join(', '))}">
     <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
@@ -506,6 +517,7 @@ async function guardarSer() {
     peso_inicial: parseFloat(f.querySelector('.m-peso').value),
     costo: parseInt(f.querySelector('.m-costo').value || 0),
     funcion: f.querySelector('.m-funcion').value || null,
+    aprendizaje: f.querySelector('.m-aprendizaje').value,
     conexiones: lista(f.querySelector('.m-conexiones').value),
     tensiones: lista(f.querySelector('.m-tensiones').value),
   }));
@@ -597,7 +609,7 @@ async function transmitirRumor(boton) {
     $('#trResultado').innerHTML = `
       <div class="resultado">
         <span class="tenue">lo que guardó ${esc(v.receptor)} — distancia: ${v.distancia_raiz.toFixed(3)}</span>
-        ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»${grietas(r.tensiones)}</div>`;
+        ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»${grietas(r.tensiones)}${pesosMovidos(r.pesos_movidos)}</div>`;
   } finally { boton.disabled = false; boton.textContent = 'Transmitir (LLM real)'; }
 }
 async function evaluarScore() {

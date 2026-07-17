@@ -424,10 +424,18 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         # escucha); transmitir lo recibe ya hecho y no lo recalcula.
         emb = _embeddings(p)
         loadout = calcular_loadout(receptor, version.contenido, emb)
+        # Pesos ANTES de escuchar: si una contradicción mueve algo (políticas de
+        # aprendizaje, mejora 04), el autor lo ve sin ir a buscar el estado vivo.
+        antes = {mid: e.peso for mid, e in p.leer_estado(cuerpo.receptor_id).items()}
         nueva = transmitir(
             cuerpo.emisor_id, receptor, version, grafo, emb, _cliente(), reloj,
             loadout=loadout,
         )
+        pesos_movidos = {
+            mid: [antes[mid], e.peso]
+            for mid, e in p.leer_estado(cuerpo.receptor_id).items()
+            if mid in antes and e.peso != antes[mid]
+        }
 
         tensiones = [t.model_dump() for t in loadout.tensiones]
         bitacora.registrar(p.carpeta, {
@@ -436,9 +444,10 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "entrada": version.contenido,
             "salida": nueva.contenido,
             "terminos": {"emisor": cuerpo.emisor_id, "distancia_raiz": nueva.distancia_raiz,
-                         "tensiones": tensiones},
+                         "tensiones": tensiones, "pesos_movidos": pesos_movidos},
         })
-        return {"version": nueva.model_dump(), "tensiones": tensiones}
+        return {"version": nueva.model_dump(), "tensiones": tensiones,
+                "pesos_movidos": pesos_movidos}
 
     @app.get("/clocks")
     def listar_clocks(p: Persistencia = Depends(dep_persistencia)):

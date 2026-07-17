@@ -355,6 +355,44 @@ def test_transmitir_muta_y_queda_en_grafo_y_bitacora(taller):
     assert "sabiendo todo" in entradas[0]["salida"]
 
 
+def test_transmitir_muestra_los_pesos_que_movio_la_contradiccion(taller):
+    """Experimento 04: el meme radicalizable contradicho gana peso, y la
+    respuesta y la bitácora lo muestran para el protocolo A/B."""
+    import json as _json
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero(memes=[
+        {"id": "PF-casa", "tipo": "fundacional", "texto": "Mi taberna es mi reino.",
+         "peso_inicial": 9.0},
+        {"id": "oido-fino", "tipo": "operativo", "texto": "Acá se escucha todo.",
+         "peso_inicial": 6.0, "costo": 20, "aprendizaje": "se_radicaliza"},
+    ]))
+    taller.post("/hechos?mundo=taberna", json={**HECHO, "testigo": "el_viejo_tomas"})
+    taller.cliente_llm.respuesta_por_defecto = _json.dumps({
+        "contenido_entendido": "Dicen que en mi propia taberna nadie se enteró de nada.",
+        "memes_resonantes": [],
+        "memes_desafiados": ["oido-fino"],
+    }, ensure_ascii=False)
+
+    r = taller.post("/transmitir?mundo=taberna", json={
+        "emisor_id": "el_viejo_tomas",
+        "receptor_id": "tabernero",
+        "version_id": "kraken-bahia-raiz",
+        "momento": "1850-03-01T09:00:00",
+    })
+
+    assert r.status_code == 200
+    movidos = r.json()["pesos_movidos"]
+    assert list(movidos) == ["oido-fino"]
+    antes, despues = movidos["oido-fino"]
+    assert antes == 6.0 and despues > 6.0    # contradicho → se atrinchera
+
+    # La semilla guardó la política y la bitácora registró el movimiento.
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+    assert ser["memes"][1]["aprendizaje"] == "se_radicaliza"
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["terminos"]["pesos_movidos"] == {"oido-fino": [antes, despues]}
+
+
 def test_transmitir_muestra_y_registra_la_grieta(taller):
     import json as _json
     taller.post("/mundos", json={"nombre": "taberna"})
