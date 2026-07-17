@@ -79,6 +79,8 @@ class Memetario:
                     peso=est.peso if est else meme.peso_inicial,
                     ultima_activacion=est.ultima_activacion if est else None,
                     veces_movilizado=est.veces_movilizado if est else 0,
+                    tensiones=meme.tensiones,
+                    funcion=meme.funcion,
                 )
             )
         return vivos

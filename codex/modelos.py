@@ -13,6 +13,7 @@ El peso vivo NUNCA se guarda en el JSON: esa duplicación fue el bug de Fray Tom
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,20 @@ class TipoMeme(str, Enum):
     FUNDACIONAL = "fundacional"   # Piedra Fundacional: nunca decae y siempre es gratis.
     OPERATIVO = "operativo"
     EXPERIMENTAL = "experimental"
+
+
+# La clasificación FUNCIONAL del meme: qué clase de lente es. Ortogonal al tipo,
+# que mide estabilidad (una PF puede ser moral; un experimental, perceptivo).
+FuncionMeme = Literal["perceptivo", "estrategico", "moral", "identitario", "emocional"]
+
+# Cómo se anota cada función junto al meme en los prompts (la lente es femenina).
+LENTE_POR_FUNCION = {
+    "perceptivo": "lente perceptiva",
+    "estrategico": "lente estratégica",
+    "moral": "lente moral",
+    "identitario": "lente identitaria",
+    "emocional": "lente emocional",
+}
 
 
 class Meme(BaseModel):
@@ -37,7 +52,11 @@ class Meme(BaseModel):
     # el lugar donde esté el ser. En el paso 1 todavía no hay lugares, así que el
     # costo es fijo. La lógica de costo efectivo vivirá en el loadout, no acá.
     costo: int = 0
-    conexiones: list[str] = Field(default_factory=list)
+    conexiones: list[str] = Field(default_factory=list)   # refuerzo (sin cambio de sentido)
+    # Memes con los que este NO puede convivir en paz. La tensión es simétrica:
+    # si A la declara con B, vale en ambos sentidos aunque B no la declare.
+    tensiones: list[str] = Field(default_factory=list)
+    funcion: FuncionMeme | None = None
 
 
 class Ser(BaseModel):
@@ -79,6 +98,21 @@ class MemeVivo(BaseModel):
     peso: float
     ultima_activacion: str | None = None
     veces_movilizado: int = 0
+    tensiones: list[str] = Field(default_factory=list)
+    funcion: str | None = None
+
+
+class TensionInterna(BaseModel):
+    """Dos memes incompatibles, de peso parejo, activos a la vez: la grieta.
+
+    No se resuelve: se narra. La detecta el loadout (código puro) y entra a los
+    prompts como material dramático."""
+
+    meme_a: str
+    meme_b: str
+    texto_a: str
+    texto_b: str
+    intensidad: float   # el menor de los dos pesos normalizados: cuánto pesa la grieta
 
 
 class Loadout(BaseModel):
@@ -91,6 +125,7 @@ class Loadout(BaseModel):
     seleccionados: list[MemeVivo]
     mana_usado: int
     scores: dict[str, float] = Field(default_factory=dict)
+    tensiones: list[TensionInterna] = Field(default_factory=list)
 
     @property
     def ids(self) -> list[str]:

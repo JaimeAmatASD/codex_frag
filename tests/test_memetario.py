@@ -3,8 +3,11 @@
 import json
 import logging
 
+import pytest
+from pydantic import ValidationError
+
 from codex.memetario import Memetario
-from codex.modelos import Ser, TipoMeme
+from codex.modelos import Meme, Ser, TipoMeme
 from codex.persistencia import Persistencia
 
 SER_EJEMPLO = {
@@ -57,6 +60,35 @@ def test_conexion_a_meme_inexistente_loguea_y_no_rompe(tmp_path, caplog):
 
     assert ("a", "fantasma") not in m.grafo.edges
     assert any("fantasma" in r.message for r in caplog.records)
+
+
+def test_ser_viejo_sin_tensiones_ni_funcion_carga_igual():
+    # SER_EJEMPLO no declara los campos nuevos: retrocompatibilidad total, sin migración.
+    ser = Ser(**SER_EJEMPLO)
+    assert ser.memes[0].tensiones == []
+    assert ser.memes[0].funcion is None
+
+
+def test_funcion_invalida_es_rechazada():
+    with pytest.raises(ValidationError):
+        Meme(id="x", tipo="operativo", texto="t", peso_inicial=1.0, funcion="mistica")
+
+
+def test_la_vista_viva_lleva_tensiones_y_funcion(tmp_path):
+    datos = {
+        "ser_id": "x", "mana_max": 50,
+        "memes": [
+            {"id": "a", "tipo": "operativo", "texto": "ta", "peso_inicial": 5.0,
+             "tensiones": ["b"], "funcion": "moral"},
+            {"id": "b", "tipo": "operativo", "texto": "tb", "peso_inicial": 5.0},
+        ],
+    }
+    m = Memetario(Ser(**datos), Persistencia(tmp_path / "mundo"))
+
+    por_id = {mv.id: mv for mv in m.memes_vivos()}
+    assert por_id["a"].tensiones == ["b"]
+    assert por_id["a"].funcion == "moral"
+    assert por_id["b"].tensiones == []
 
 
 def test_cargar_desde_json(tmp_path):
