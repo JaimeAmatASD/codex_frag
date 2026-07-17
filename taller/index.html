@@ -90,6 +90,16 @@
   <section id="zona-personajes">
     <div class="panel"><h2>Los seres de este mundo</h2><div id="listaSeres" class="tenue">…</div></div>
     <div class="panel">
+      <h2>Relatá al personaje <button class="mic" data-mic="relato">🎙</button></h2>
+      <p class="tenue">Contalo en lenguaje natural ("es un veterinario de 62 años, ayuda a
+      cualquiera, nunca perdonó a su hijo, tiene miedo a quedarse solo"). El sistema deriva
+      la propuesta completa y la deja en el formulario de abajo: revisala, retocá y guardá
+      — nada se guarda solo.</p>
+      <textarea id="relato" rows="3" style="width:100%"></textarea><br>
+      <button class="accion" onclick="derivarSer(this)">Derivar ser (LLM real)</button>
+      <div id="derivarResultado"></div>
+    </div>
+    <div class="panel">
       <h2 id="tituloFormSer">Crear un ser</h2>
       <div class="fila">
         <div><label>id (sin espacios)</label><input id="serId"></div>
@@ -374,6 +384,24 @@ function editarSer(serId) {
     Object.entries(ser.hoja.acciones).forEach(([n, r]) => agregarAccion(n, r));
   }
   window.scrollTo({top: 9999, behavior: 'smooth'});
+}
+async function derivarSer(boton) {
+  const relato = $('#relato').value.trim();
+  if (!relato) { $('#derivarResultado').innerHTML = '<p class="rojo">Primero relatá al personaje.</p>'; return; }
+  boton.disabled = true; boton.textContent = 'Derivando…';
+  try {
+    const r = await api('POST', '/seres/derivar', {descripcion: relato});
+    const s = r.propuesta;
+    // La propuesta CAE en el formulario de siempre: el autor cura y guarda.
+    $('#tituloFormSer').textContent = `Propuesta derivada: ${s.ser_id} — revisala, retocá y guardá`;
+    $('#serId').value = s.ser_id; $('#serMana').value = s.mana_max; $('#serOrigen').value = '';
+    $('#memes').innerHTML = ''; s.memes.forEach(agregarMeme);
+    $('#acciones').innerHTML = '';
+    $('#hojaStress').value = s.hoja.stress_max;
+    Object.entries(s.hoja.acciones).forEach(([n, rango]) => agregarAccion(n, rango));
+    $('#derivarResultado').innerHTML = `<p class="tenue">Propuesta abajo, en el formulario${r.reintento ? ' (hubo un reintento)' : ''}. Nada quedó guardado todavía.</p>`;
+    window.scrollTo({top: 9999, behavior: 'smooth'});
+  } finally { boton.disabled = false; boton.textContent = 'Derivar ser (LLM real)'; }
 }
 async function guardarSer() {
   const lista = s => s.split(',').map(x => x.trim()).filter(Boolean);
