@@ -19,6 +19,7 @@ from pathlib import Path
 
 from .clocks import Clock
 from .modelos import EstadoMeme, Ser
+from .singularidades import Singularidad
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,20 @@ class Persistencia:
                     segmentos_total    INTEGER NOT NULL,
                     segmentos_actuales INTEGER NOT NULL,
                     estado             TEXT NOT NULL
+                );
+
+                -- Estado vivo del mundo entero, no de un ser (mejora 03):
+                -- hoy, la hora del reloj del mundo. El reset la borra.
+                CREATE TABLE IF NOT EXISTS mundo_estado (
+                    clave TEXT PRIMARY KEY,
+                    valor TEXT NOT NULL
+                );
+
+                -- Singularidades ya disparadas. La marca vive SOLO acá
+                -- (regla 1): la semilla es singularidades.json y no se toca.
+                CREATE TABLE IF NOT EXISTS singularidades_disparadas (
+                    singularidad_id TEXT PRIMARY KEY,
+                    momento_disparo TEXT NOT NULL
                 );
                 """
             )
@@ -273,6 +288,49 @@ class Persistencia:
         """Todos los clocks del mundo (también los completados: son memoria)."""
         filas = self._conn.execute("SELECT * FROM clocks ORDER BY rowid").fetchall()
         return [Clock(**dict(f)) for f in filas]
+
+    # ----- El reloj del mundo (mejora 03) -----
+
+    def leer_momento_mundo(self) -> str | None:
+        """La hora actual del mundo en ISO; None si nadie la fijó todavía."""
+        fila = self._conn.execute(
+            "SELECT valor FROM mundo_estado WHERE clave = 'momento'"
+        ).fetchone()
+        return fila["valor"] if fila else None
+
+    def guardar_momento_mundo(self, momento: str) -> None:
+        """Fija la hora del mundo. Es estado vivo: el reset del mundo la borra."""
+        with self._conn:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO mundo_estado (clave, valor) VALUES ('momento', ?)",
+                (momento,),
+            )
+
+    # ----- Singularidades (mejora 03) -----
+
+    def cargar_singularidades(self) -> list[Singularidad]:
+        """La semilla de singularidades del mundo (`singularidades.json`);
+        lista vacía si el mundo no tiene ninguna agendada."""
+        ruta = self.carpeta / "singularidades.json"
+        if not ruta.exists():
+            return []
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+        return [Singularidad(**d) for d in datos]
+
+    def singularidades_disparadas(self) -> dict[str, str]:
+        """{singularidad_id: momento_disparo} de las que ya ocurrieron."""
+        filas = self._conn.execute(
+            "SELECT singularidad_id, momento_disparo FROM singularidades_disparadas"
+        ).fetchall()
+        return {f["singularidad_id"]: f["momento_disparo"] for f in filas}
+
+    def marcar_singularidad_disparada(self, singularidad_id: str, momento: str) -> None:
+        with self._conn:
+            self._conn.execute(
+                "INSERT OR IGNORE INTO singularidades_disparadas "
+                "(singularidad_id, momento_disparo) VALUES (?, ?)",
+                (singularidad_id, momento),
+            )
 
     # ----- Caché de embeddings -----
 
