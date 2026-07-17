@@ -1,0 +1,383 @@
+{
+  "directed": true,
+  "multigraph": true,
+  "graph": {},
+  "nodes": [
+    {
+      "tipo": "hecho",
+      "contenido": "Anoche el faro estuvo encendido y girando, y aun así La Gaviota encalló en las piedras del sur. Dos hombres nadaron hasta la costa.",
+      "momento": "1850-03-05T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "noticia-1"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-1",
+      "contenido": "Anoche el faro estuvo encendido y girando, y aun así La Gaviota encalló en las piedras del sur. Dos hombres nadaron hasta la costa.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-05T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "noticia-1-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-1",
+      "contenido": "Anoche el faro viejo giraba para cuidarnos, pero La Gaviota encalló igual en las piedras del sur. Se supone que con la luz dando vueltas ninguna barca se pierde, pero ese aparato gastado que nadie repara nos debió traicionar otra vez. Por suerte, dos hombres pudieron nadar hasta la costa.",
+      "version_padre": "noticia-1-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-05T10:00:00",
+      "distancia_raiz": 0.19905132055282593,
+      "id": "v-e62b5b8e4722"
+    },
+    {
+      "tipo": "ser",
+      "id": "vigia_normal"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-1",
+      "contenido": "Anoche el faro viejo giraba para cuidarnos, pero lo que no se repara siempre nos traiciona. La Gaviota encalló en el sur porque el mar no perdona, y esa vieja luz debió fallar en algo. Al menos dos hombres nadaron a la costa.",
+      "version_padre": "noticia-1-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-05T10:00:00",
+      "distancia_raiz": 0.248895525932312,
+      "id": "v-7a4e8b1dd83a"
+    },
+    {
+      "tipo": "ser",
+      "id": "vigia_radical"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "El farero admitió en la taberna que hay noches en que la lámpara se apaga sola y él duerme sin enterarse.",
+      "momento": "1850-03-06T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "noticia-2"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-2",
+      "contenido": "El farero admitió en la taberna que hay noches en que la lámpara se apaga sola y él duerme sin enterarse.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-06T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "noticia-2-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-2",
+      "contenido": "Dicen que el farero confesó en la taberna que la lámpara vieja se apaga sola por las noches mientras él duerme. El faro es lo único que nos cuida de este mar que no perdona, tiene que seguir brillando... pero es viejo, nadie lo arregla y nos va a terminar traicionando.",
+      "version_padre": "noticia-2-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-06T10:00:00",
+      "distancia_raiz": 0.19908452033996582,
+      "id": "v-7110d79f7209"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-2",
+      "contenido": "El farero admitió en la taberna que la lámpara vieja se apaga sola por las noches mientras él duerme. Es la traición de lo que no se repara, apagando al único protector que nos cuida de este mar implacable.",
+      "version_padre": "noticia-2-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-06T10:00:00",
+      "distancia_raiz": 0.24955600500106812,
+      "id": "v-9ca5838465ea"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "Un mercante que pasó de largo contó que desde el mar la luz del faro se ve amarilla y débil, casi nada entre la niebla.",
+      "momento": "1850-03-07T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "noticia-3"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-3",
+      "contenido": "Un mercante que pasó de largo contó que desde el mar la luz del faro se ve amarilla y débil, casi nada entre la niebla.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-07T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "noticia-3-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-3",
+      "contenido": "Un mercante que pasó de largo vio que nuestra luz se está apagando, débil y amarilla entre la niebla. El faro nos cuida, sé que mientras gire no nos vamos a perder, pero si nadie repara esa vejez, nos va a traicionar cuando más necesitemos defendernos del mar.",
+      "version_padre": "noticia-3-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-07T10:00:00",
+      "distancia_raiz": 0.1265089511871338,
+      "id": "v-39c3e02199e7"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-3",
+      "contenido": "Dicen que un mercante vio la luz de nuestro faro agonizando, débil y amarilla entre la niebla. El faro sigue girando para cuidarnos, sé que tiene que cuidarnos, pero la dejadez lo está matando; si dejamos que falle por no repararlo, el mar no va a tener piedad de nosotros.",
+      "version_padre": "noticia-3-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-07T10:00:00",
+      "distancia_raiz": 0.21042215824127197,
+      "id": "v-61ec80e034bb"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "Los del astillero subieron a revisar el faro: el eje está podrido y las lentes rajadas; bajaron meneando la cabeza.",
+      "momento": "1850-03-08T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "noticia-4"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-4",
+      "contenido": "Los del astillero subieron a revisar el faro: el eje está podrido y las lentes rajadas; bajaron meneando la cabeza.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-08T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "noticia-4-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-4",
+      "contenido": "La gente del astillero subió a nuestro faro y bajaron derrotados, sacudiendo la cabeza: dicen que el eje está podrido y los cristales rajados. El mar no perdona una distracción así y nos va a tragar si nos descuidamos. El faro viejo tiene que seguir girando para cuidándonos, no podemos perdernos... pero si nadie lo repara, esa dejadez nos va a terminar traicionando en la peor tormenta.",
+      "version_padre": "noticia-4-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-08T10:00:00",
+      "distancia_raiz": 0.20950031280517578,
+      "id": "v-115da853b1a4"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-4",
+      "contenido": "Los del astillero subieron al faro y bajaron resignados, meneando la cabeza: el eje está podrido y las lentes rajadas. El faro es lo único que nos cuida de este mar que no perdona, pero lo hemos dejado estar y lo viejo, si no se repara, nos va a terminar traicionando.",
+      "version_padre": "noticia-4-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-08T10:00:00",
+      "distancia_raiz": 0.11886841058731079,
+      "id": "v-9dde7717dc61"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "Otra barca no volvió: El Cormorán salió con buen tiempo y faro encendido, y el mar lo devolvió en tablas.",
+      "momento": "1850-03-09T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "noticia-5"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-5",
+      "contenido": "Otra barca no volvió: El Cormorán salió con buen tiempo y faro encendido, y el mar lo devolvió en tablas.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-09T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "noticia-5-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-5",
+      "contenido": "El Cormorán se hizo astillas con buen tiempo y el faro encendido. No lo entiendo: se supone que esa luz vieja nos protege y evita que nos perdamos, pero está sin mantenimiento... ¿Falló el mecanismo y nos traicionó en el peor momento, o es que el mar se los tragó igual a pesar de la luz?",
+      "version_padre": "noticia-5-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-09T10:00:00",
+      "distancia_raiz": 0.3256436586380005,
+      "id": "v-26cffc445d5d"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "noticia-5",
+      "contenido": "El Cormorán se hizo astillas con buen tiempo. El faro estaba encendido, se supone que su luz debía protegerlos de perderse, pero ese fierro viejo y sin mantenimiento nos está traicionando. El mar no perdona.",
+      "version_padre": "noticia-5-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-09T10:00:00",
+      "distancia_raiz": 0.26508378982543945,
+      "id": "v-e72a19a241c6"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "Mañana a la noche la flota sale completa a aprovechar la corriente, y los viejos dicen que va a bajar niebla cerrada.",
+      "momento": "1850-03-10T09:00:00",
+      "lugar": "el puerto",
+      "origen": "experimento_04",
+      "id": "la-flota-sale"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "la-flota-sale",
+      "contenido": "Mañana a la noche la flota sale completa a aprovechar la corriente, y los viejos dicen que va a bajar niebla cerrada.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-10T09:00:00",
+      "distancia_raiz": 0.0,
+      "id": "la-flota-sale-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "la-flota-sale",
+      "contenido": "Mañana a la noche la flota entera se la juega con la corriente y se mete directo en una niebla cerrada. El faro viejo tiene que guiarlos a puerto como siempre, pero está tan abandonado que me da pavor que falle y nos traicione justo cuando todos estén en el agua.",
+      "version_padre": "la-flota-sale-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_normal",
+      "momento": "1850-03-10T10:00:00",
+      "distancia_raiz": 0.3049669861793518,
+      "id": "v-b4200db8ef58"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "la-flota-sale",
+      "contenido": "Mañana a la noche la flota entera se arriesga a ciegas al mar por una corriente, justo cuando baja una niebla cerrada. Van a depender de que la luz del faro viejo los salve, pero si ese aparato sin mantenimiento nos llega a traicionar y falla, el mar no va a tener piedad con ninguno.",
+      "version_padre": "la-flota-sale-raiz",
+      "emisor": "un_pescador",
+      "receptor": "vigia_radical",
+      "momento": "1850-03-10T10:00:00",
+      "distancia_raiz": 0.305905818939209,
+      "id": "v-b4cebaa06b2d"
+    }
+  ],
+  "edges": [
+    {
+      "source": "noticia-1-raiz",
+      "target": "v-e62b5b8e4722",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-1-raiz",
+      "target": "v-7a4e8b1dd83a",
+      "key": "deriva"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-e62b5b8e4722",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-7110d79f7209",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-39c3e02199e7",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-115da853b1a4",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-26cffc445d5d",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_normal",
+      "target": "v-b4200db8ef58",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-7a4e8b1dd83a",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-9ca5838465ea",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-61ec80e034bb",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-9dde7717dc61",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-e72a19a241c6",
+      "key": "conoce"
+    },
+    {
+      "source": "vigia_radical",
+      "target": "v-b4cebaa06b2d",
+      "key": "conoce"
+    },
+    {
+      "source": "noticia-2-raiz",
+      "target": "v-7110d79f7209",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-2-raiz",
+      "target": "v-9ca5838465ea",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-3-raiz",
+      "target": "v-39c3e02199e7",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-3-raiz",
+      "target": "v-61ec80e034bb",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-4-raiz",
+      "target": "v-115da853b1a4",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-4-raiz",
+      "target": "v-9dde7717dc61",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-5-raiz",
+      "target": "v-26cffc445d5d",
+      "key": "deriva"
+    },
+    {
+      "source": "noticia-5-raiz",
+      "target": "v-e72a19a241c6",
+      "key": "deriva"
+    },
+    {
+      "source": "la-flota-sale-raiz",
+      "target": "v-b4200db8ef58",
+      "key": "deriva"
+    },
+    {
+      "source": "la-flota-sale-raiz",
+      "target": "v-b4cebaa06b2d",
+      "key": "deriva"
+    }
+  ]
+}

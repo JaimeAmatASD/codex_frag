@@ -1,0 +1,53 @@
+{
+  "ser_id": "vigia_normal",
+  "mana_max": 40,
+  "memes": [
+    {
+      "id": "PF-mar",
+      "tipo": "fundacional",
+      "texto": "El pueblo vive del mar, y el mar no perdona al distraído.",
+      "peso_inicial": 9.0,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "faro-protector",
+      "tipo": "operativo",
+      "texto": "El faro viejo nos cuida: mientras su luz gire, ninguna barca se pierde.",
+      "peso_inicial": 7.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [
+        "dudas-practicas"
+      ],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "dudas-practicas",
+      "tipo": "operativo",
+      "texto": "Las cosas viejas fallan: lo que nadie repara termina traicionando.",
+      "peso_inicial": 6.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "ojos-lectores",
+      "tipo": "operativo",
+      "texto": "Los accidentes avisan antes de pasar, si uno sabe leer las señales.",
+      "peso_inicial": 6.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    }
+  ],
+  "origen": "experimento_04"
+}
