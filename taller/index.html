@@ -79,6 +79,40 @@
       </div>
     </div>
     <div class="panel">
+      <h2>El reloj del mundo</h2>
+      <p class="tenue">La hora de la ficción. Al avanzar, las singularidades cuyo momento
+      llega disparan solas y entran a Lore.</p>
+      <div class="fila">
+        <div><label>hora actual (ISO)</label>
+          <input id="relojMomento" placeholder="sin fijar — ej: 1850-03-01T07:00:00"></div>
+        <button class="suave" onclick="fijarReloj()">Fijar</button>
+        <div style="max-width:6rem"><label>avanzar</label>
+          <input id="avanceCantidad" type="number" value="1" min="1"></div>
+        <div style="max-width:8rem"><label>&nbsp;</label>
+          <select id="avanceUnidad"><option value="horas">horas</option><option value="dias">días</option></select></div>
+        <button class="accion" onclick="avanzarReloj()">Avanzar</button>
+      </div>
+      <div id="relojResultado"></div>
+    </div>
+    <div class="panel">
+      <h2>Singularidades — el destino agendado</h2>
+      <p class="tenue">Eventos que ocurren pase lo que pase. Fijan el contexto, no el
+      resultado: al llegar su momento entran a Lore como hecho raíz, y las historias
+      las hacen los que estaban.</p>
+      <div id="listaSingularidades" class="tenue">…</div>
+      <h2 id="tituloFormSing" style="margin-top:1rem">Agendar una singularidad</h2>
+      <div class="fila">
+        <div><label>id (sin espacios)</label><input id="singId"></div>
+        <div><label>momento del mundo (ISO)</label><input id="singMomento" value="1850-03-03T23:00:00"></div>
+        <div><label>lugar</label><input id="singLugar"></div>
+      </div>
+      <label>qué ocurre, pase lo que pase <button class="mic" data-mic="singContenido">🎙</button></label>
+      <textarea id="singContenido"></textarea>
+      <label>testigos iniciales (ids de seres, coma — vacío: ocurre sin que nadie lo vea)</label>
+      <input id="singTestigos">
+      <button class="accion" onclick="guardarSingularidad()">Agendar</button>
+    </div>
+    <div class="panel">
       <h2>Estado vivo</h2>
       <p class="tenue">Borra lo jugado (pesos, grafo de rumores, stress, clocks). Las semillas
       — tus personajes, hechos y la bitácora — quedan.</p>
@@ -227,8 +261,8 @@ async function api(metodo, ruta, cuerpo) {
 /* ---------- pestañas ---------- */
 const ZONAS = [['mundo','Mundo'],['personajes','Personajes'],['lore','Lore'],
                ['probar','Probar'],['templates','Templates'],['bitacora','Bitácora']];
-const CARGADORES = {personajes: cargarSeres, lore: cargarArboles, probar: cargarProbar,
-                    templates: cargarTemplate, bitacora: cargarBitacora};
+const CARGADORES = {mundo: cargarMundo, personajes: cargarSeres, lore: cargarArboles,
+                    probar: cargarProbar, templates: cargarTemplate, bitacora: cargarBitacora};
 function armarPestanas() {
   $('#pestanas').innerHTML = ZONAS.map(([id, titulo]) =>
     `<button id="tab-${id}" onclick="mostrarZona('${id}')">${titulo}</button>`).join('');
@@ -310,6 +344,66 @@ async function resetear(boton) {
   await api('POST', '/reset');
   boton.textContent = 'Resetear estado vivo';
   banner(null);
+  await cargarMundo();   // la hora se borró y las singularidades volvieron a pendientes
+}
+
+/* ---------- el reloj y las singularidades ---------- */
+async function cargarMundo() {
+  const [reloj, sings] = await Promise.all([api('GET', '/reloj'), api('GET', '/singularidades')]);
+  $('#relojMomento').value = reloj.momento || '';
+  window.SINGULARIDADES = sings;
+  $('#listaSingularidades').innerHTML = sings.length ? '' : 'Este mundo no tiene destino agendado.';
+  for (const s of sings) {
+    $('#listaSingularidades').insertAdjacentHTML('beforeend', `
+      <div style="margin:.6rem 0; padding:.6rem; border:1px solid var(--borde); border-radius:8px;">
+        <b>${esc(s.id)}</b>
+        <span class="chip">${s.estado === 'disparada' ? '✸ disparada' : 'pendiente'}</span>
+        <span class="chip">${esc(s.momento)}</span> <span class="chip">${esc(s.lugar)}</span>
+        <span class="chip">${s.testigos_iniciales.length
+          ? `testigos: ${esc(s.testigos_iniciales.join(', '))}` : 'sin testigos'}</span>
+        <button class="suave" style="margin:0" data-sing="${esc(s.id)}"
+                onclick="editarSingularidad(this.dataset.sing)">editar</button><br>
+        <span class="tenue">«${esc(s.contenido)}»</span>
+      </div>`);
+  }
+}
+function editarSingularidad(id) {
+  const s = window.SINGULARIDADES.find(x => x.id === id);
+  $('#tituloFormSing').textContent = `Editando: ${id}`;
+  $('#singId').value = s.id; $('#singMomento').value = s.momento;
+  $('#singLugar').value = s.lugar; $('#singContenido').value = s.contenido;
+  $('#singTestigos').value = s.testigos_iniciales.join(', ');
+}
+async function guardarSingularidad() {
+  await api('POST', '/singularidades', {
+    id: $('#singId').value.trim(),
+    contenido: $('#singContenido').value.trim(),
+    momento: $('#singMomento').value.trim(),
+    lugar: $('#singLugar').value.trim(),
+    testigos_iniciales: $('#singTestigos').value.split(',').map(x => x.trim()).filter(Boolean),
+  });
+  $('#tituloFormSing').textContent = 'Agendar una singularidad';
+  await cargarMundo();
+}
+async function fijarReloj() {
+  mostrarDisparos(await api('POST', '/reloj', {momento: $('#relojMomento').value.trim()}));
+  await cargarMundo();
+}
+async function avanzarReloj() {
+  const n = parseInt($('#avanceCantidad').value);
+  const cuerpo = $('#avanceUnidad').value === 'dias' ? {dias: n} : {horas: n};
+  mostrarDisparos(await api('POST', '/reloj/avanzar', cuerpo));
+  await cargarMundo();
+}
+function mostrarDisparos(r) {
+  $('#relojResultado').innerHTML = r.disparadas.length
+    ? r.disparadas.map(s => `
+      <div class="resultado">✸ <b>${esc(s.id)}</b> ocurrió ${botonHablar(s.contenido)}<br>
+        «${esc(s.contenido)}»<br>
+        <span class="tenue">Ya está en Lore como hecho raíz${s.testigos_iniciales.length
+          ? '; lo vieron: ' + esc(s.testigos_iniciales.join(', '))
+          : ', sin que nadie lo sepa todavía'}.</span></div>`).join('')
+    : `<p class="tenue">El mundo está en ${esc(r.momento)}. Nada del destino se alcanzó.</p>`;
 }
 
 /* ---------- personajes ---------- */

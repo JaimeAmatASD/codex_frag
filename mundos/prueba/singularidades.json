@@ -1,0 +1,15 @@
+[
+  {
+    "id": "el_hombre_pez",
+    "contenido": "La noche de la primera luna de sangre, en un risco aislado sobre el mar, cada uno de ellos —el que no muere, el pescador, el comerciante, el loco— se encuentra con un Hombre Pez. Nadie los convocó y sin embargo todos están ahí.",
+    "momento": "1850-03-03T23:00:00",
+    "lugar": "el risco aislado",
+    "origen": "",
+    "testigos_iniciales": [
+      "el_que_no_muere",
+      "pescador_supersticioso",
+      "comerciante_esceptico",
+      "hombre_loco"
+    ]
+  }
+]

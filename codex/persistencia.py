@@ -36,7 +36,10 @@ class Persistencia:
         self.mundo_id = self.carpeta.name
 
         self.carpeta.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path)
+        # check_same_thread=False: el Taller crea la conexión en un hilo y puede
+        # usarla en otro (FastAPI). Es seguro: cada request tiene SU conexión y
+        # la usa de a un hilo por vez; nunca se comparte entre requests.
+        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._crear_tablas()
 
