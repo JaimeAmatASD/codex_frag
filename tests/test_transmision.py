@@ -205,6 +205,44 @@ def test_memes_resonantes_fuera_del_loadout_se_descartan(tmp_path, caplog):
     assert all(e.veces_movilizado == 0 for e in estado.values())
 
 
+def test_memes_desafiados_aplican_su_politica_de_aprendizaje(tmp_path, caplog):
+    """Mejora 04 (experimento): el terco contradicho se atrinchera, el flojo se
+    erosiona, y los desafiados inventados se descartan como los resonantes."""
+    p = Persistencia(tmp_path / "mundo")
+    emb = Embeddings(p, encoder=_encoder)
+    grafo = GrafoMundo(p)
+    raiz = grafo.registrar_hecho(HECHO)
+    cobaya = Memetario(Ser(**{
+        "ser_id": "cobaya",
+        "mana_max": 100,
+        "memes": [
+            {"id": "PF-mar", "tipo": "fundacional",
+             "texto": "El mar siempre cobra lo suyo.", "peso_inicial": 9.0},
+            {"id": "terco", "tipo": "operativo", "peso_inicial": 5.0, "costo": 0,
+             "texto": "Un avistaje extraño en el agua anuncia tormenta o desgracia.",
+             "aprendizaje": "se_radicaliza"},
+            {"id": "flojo", "tipo": "operativo", "peso_inicial": 5.0, "costo": 0,
+             "texto": "Las viejas historias del puerto suelen decir la verdad.",
+             "aprendizaje": "se_erosiona"},
+        ],
+    }), p)
+    respuesta = json.dumps(
+        {"contenido_entendido": ENTENDIDO, "memes_resonantes": [],
+         "memes_desafiados": ["terco", "flojo", "meme-inventado"]},
+        ensure_ascii=False,
+    )
+    cliente = MockClient(respuestas=[respuesta])
+
+    with caplog.at_level(logging.WARNING):
+        transmitir("un_testigo", cobaya, raiz, grafo, emb, cliente, reloj=RelojSimple(datetime(1850, 3, 1, 8, 0)))
+
+    estado = p.leer_estado("cobaya")
+    assert estado["terco"].peso > 5.0     # contradicho → se atrinchera
+    assert estado["flojo"].peso < 5.0     # contradicho → se erosiona
+    assert estado["PF-mar"].peso == 9.0   # la PF no aprende
+    assert any("desafiados fuera del loadout" in r.message for r in caplog.records)
+
+
 # ----- La grieta en el prompt de mutación -----
 
 def _loadout_partido(tensiones):

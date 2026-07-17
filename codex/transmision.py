@@ -26,6 +26,7 @@ from string import Template
 
 from pydantic import ValidationError
 
+from .decaimiento import aplicar_contradicciones
 from .embeddings import Embeddings
 from .grafo_mundo import GrafoMundo
 from .hechos import DISTANCIA_NO_MEDIDA, RespuestaMutacion, Version
@@ -71,6 +72,23 @@ def _parsear_respuesta(cruda: str) -> RespuestaMutacion:
     if inicio == -1 or fin <= inicio:
         raise ValueError("la respuesta no contiene un bloque JSON")
     return RespuestaMutacion(**json.loads(cruda[inicio : fin + 1]))
+
+
+def _solo_del_loadout(
+    reportados: list[str], loadout: Loadout, receptor_id: str, etiqueta: str
+) -> list[str]:
+    """Filtra ids reportados por el LLM a los que estaban en el loadout. Se
+    normalizan porque el modelo a veces copia los corchetes del template
+    ("[avistaje-presagio]"); eso es formato, no un meme inventado."""
+    limpios = [m.strip().strip("[]") for m in reportados]
+    validos = [m for m in limpios if m in loadout.ids]
+    inventados = set(limpios) - set(validos)
+    if inventados:
+        logger.warning(
+            "El LLM reportó memes %s fuera del loadout de %s, se descartan: %s",
+            etiqueta, receptor_id, inventados,
+        )
+    return validos
 
 
 def _pedir_mutacion(cliente: ClienteLLM, prompt: str) -> RespuestaMutacion | None:
@@ -134,16 +152,12 @@ def transmitir(
         respuesta = RespuestaMutacion(contenido_entendido=contenido_oido)
 
     # El LLM propone, el motor dispone: solo cuentan los memes que estaban en el loadout.
-    # Se normalizan los ids porque el modelo a veces copia los corchetes del template
-    # ("[avistaje-presagio]"); eso es formato, no un meme inventado.
-    reportados = [m.strip().strip("[]") for m in respuesta.memes_resonantes]
-    resonantes = [m for m in reportados if m in loadout.ids]
-    inventados = set(reportados) - set(resonantes)
-    if inventados:
-        logger.warning(
-            "El LLM reportó memes resonantes fuera del loadout de %s, se descartan: %s",
-            receptor.ser.ser_id, inventados,
-        )
+    resonantes = _solo_del_loadout(
+        respuesta.memes_resonantes, loadout, receptor.ser.ser_id, "resonantes"
+    )
+    desafiados = _solo_del_loadout(
+        respuesta.memes_desafiados, loadout, receptor.ser.ser_id, "desafiados"
+    )
 
     raiz = grafo.version_raiz(version.hecho_id)
     # `similitud` primero: recién después de intentar calcularla `disponible` es confiable.
@@ -180,4 +194,9 @@ def transmitir(
         loadout_ids=loadout.ids,
         movilizados_ids=resonantes,
     )
+    # Mejora 04 (experimento): los memes desafiados aplican su política de
+    # aprendizaje. Con las políticas default no se mueve ningún peso — el
+    # refuerzo por USO sigue siendo un ciclo aparte; esto reacciona al CONTENIDO.
+    if desafiados:
+        aplicar_contradicciones(receptor, receptor.persistencia, desafiados)
     return nueva

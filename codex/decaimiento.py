@@ -27,6 +27,8 @@ PISO = 0.1                # El peso decae hacia acá, nunca por debajo (asíntot
 TECHO = 10.0              # El refuerzo acerca a acá, nunca por encima.
 TASA_DECAIMIENTO = 0.05   # Fracción del camino al piso que se recorre por ciclo.
 TASA_REFUERZO = 0.20      # Fracción del camino al techo que se recorre por activación.
+TASA_EROSION = 0.15       # Mejora 04: cuánto decae un meme que se erosiona por
+                          # contradicción (número grueso: 3× el ciclo normal).
 
 
 def decaer(peso: float, piso: float = PISO, tasa: float = TASA_DECAIMIENTO) -> float:
@@ -46,7 +48,7 @@ def aplicar_decaimiento(memetario: Memetario, persistencia: Persistencia) -> dic
     nuevos = {
         m.id: decaer(m.peso)
         for m in memetario.memes_vivos()
-        if m.tipo != TipoMeme.FUNDACIONAL
+        if m.tipo != TipoMeme.FUNDACIONAL and m.aprendizaje != "solo_trauma"
     }
     if nuevos:
         persistencia.actualizar_pesos(memetario.ser.ser_id, nuevos)
@@ -70,8 +72,32 @@ def reforzar_movilizados(
     nuevos = {
         m.id: reforzar(m.peso)
         for m in vivos
-        if m.id in movilizados and m.tipo != TipoMeme.FUNDACIONAL
+        if m.id in movilizados
+        and m.tipo != TipoMeme.FUNDACIONAL
+        and m.aprendizaje != "solo_trauma"
     }
+    if nuevos:
+        persistencia.actualizar_pesos(memetario.ser.ser_id, nuevos)
+    return nuevos
+
+
+def aplicar_contradicciones(
+    memetario: Memetario, persistencia: Persistencia, desafiados_ids: list[str]
+) -> dict[str, float]:
+    """Aplica la política de aprendizaje de cada meme desafiado (mejora 04,
+    EXPERIMENTO): el que se radicaliza se atrinchera (gana peso al ser
+    contradicho); el que se erosiona decae rápido. `normal` y `solo_trauma`
+    no se mueven por contradicción, y las PF no aprenden: quedan fuera siempre.
+    Devuelve los pesos que cambiaron."""
+    desafiados = set(desafiados_ids)
+    nuevos: dict[str, float] = {}
+    for m in memetario.memes_vivos():
+        if m.id not in desafiados or m.tipo == TipoMeme.FUNDACIONAL:
+            continue
+        if m.aprendizaje == "se_radicaliza":
+            nuevos[m.id] = reforzar(m.peso)
+        elif m.aprendizaje == "se_erosiona":
+            nuevos[m.id] = decaer(m.peso, tasa=TASA_EROSION)
     if nuevos:
         persistencia.actualizar_pesos(memetario.ser.ser_id, nuevos)
     return nuevos
