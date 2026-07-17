@@ -269,6 +269,11 @@ function esc(texto) {
   return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+function grietas(tensiones) {
+  // Las tensiones activas del cristal, para que el autor VEA la grieta.
+  return (tensiones || []).map(t =>
+    `<br><span class="tenue">⚡ grieta: «${esc(t.texto_a)}» ⇄ «${esc(t.texto_b)}»</span>`).join('');
+}
 
 /* ---------- mundo ---------- */
 async function cargarMundos() {
@@ -310,6 +315,13 @@ function filaMeme(m = {}) {
     <input placeholder="texto del meme" class="m-texto" style="flex:3" value="${esc(m.texto || '')}">
     <input placeholder="peso" class="m-peso" type="number" step="0.5" style="max-width:5rem" value="${m.peso_inicial ?? 5}">
     <input placeholder="costo" class="m-costo" type="number" style="max-width:5rem" value="${m.costo ?? 20}">
+    <select class="m-funcion" title="qué clase de lente es (opcional)">
+      <option value="">sin función</option>
+      ${['perceptivo','estrategico','moral','identitario','emocional'].map(f =>
+        `<option ${m.funcion === f ? 'selected' : ''}>${f}</option>`).join('')}
+    </select>
+    <input placeholder="conexiones (ids, coma)" class="m-conexiones" value="${esc((m.conexiones || []).join(', '))}">
+    <input placeholder="tensiones (ids, coma)" class="m-tensiones" title="memes con los que no puede convivir en paz" value="${esc((m.tensiones || []).join(', '))}">
     <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
   return div;
 }
@@ -364,12 +376,16 @@ function editarSer(serId) {
   window.scrollTo({top: 9999, behavior: 'smooth'});
 }
 async function guardarSer() {
+  const lista = s => s.split(',').map(x => x.trim()).filter(Boolean);
   const memes = [...document.querySelectorAll('.meme-fila')].map(f => ({
     id: f.querySelector('.m-id').value.trim(),
     tipo: f.querySelector('.m-tipo').value,
     texto: f.querySelector('.m-texto').value.trim(),
     peso_inicial: parseFloat(f.querySelector('.m-peso').value),
     costo: parseInt(f.querySelector('.m-costo').value || 0),
+    funcion: f.querySelector('.m-funcion').value || null,
+    conexiones: lista(f.querySelector('.m-conexiones').value),
+    tensiones: lista(f.querySelector('.m-tensiones').value),
   }));
   const acciones = {};
   [...document.querySelectorAll('.accion-fila')].forEach(f => {
@@ -459,7 +475,7 @@ async function transmitirRumor(boton) {
     $('#trResultado').innerHTML = `
       <div class="resultado">
         <span class="tenue">lo que guardó ${esc(v.receptor)} — distancia: ${v.distancia_raiz.toFixed(3)}</span>
-        ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»</div>`;
+        ${botonHablar(v.contenido)}<br>«${esc(v.contenido)}»${grietas(r.tensiones)}</div>`;
   } finally { boton.disabled = false; boton.textContent = 'Transmitir (LLM real)'; }
 }
 async function evaluarScore() {
@@ -474,7 +490,7 @@ async function evaluarScore() {
   $('#scTerminos').innerHTML = `
     <div class="resultado">
       Posición <b>${e.posicion}</b> · efecto <b>${e.efecto}</b> · <b>${e.dados}</b> dado(s)
-      <span class="tenue">(score ${e.detalles.score.toFixed(2)})</span><br>
+      <span class="tenue">(score ${e.detalles.score.toFixed(2)})</span>${grietas(r.contexto.loadout.tensiones)}<br>
       <button class="accion" onclick="tirarScore(null, this)">Tirar</button>
       <button class="suave" onclick="tirarScore('dado_extra', this)">Empujar: +1 dado (2 stress)</button>
       <button class="suave" onclick="tirarScore('mejorar_posicion', this)">Empujar: posición</button>

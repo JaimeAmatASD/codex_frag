@@ -28,6 +28,7 @@ from codex.clocks import Clock
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
 from codex.hechos import Hecho
+from codex.loadout import calcular_loadout
 from codex.memetario import Memetario
 from codex.modelos import Ser
 from codex.persistencia import Persistencia
@@ -49,9 +50,13 @@ NOMBRE_VALIDO = re.compile(r"^[a-zA-Z0-9_-]+$")   # nombres de mundo: sin rutas 
 
 RAIZ_REPO = Path(__file__).parent.parent
 CARPETA_TEMPLATES = RAIZ_REPO / "templates"
-# Los únicos templates editables desde el taller: los dos que los docs mandan
+# Los únicos templates editables desde el taller: los que los docs mandan
 # iterar cuando las voces no revelan. Nada de rutas libres.
-TEMPLATES_EDITABLES = {"mutacion": "mutacion.txt", "narracion_score": "narracion_score.txt"}
+TEMPLATES_EDITABLES = {
+    "mutacion": "mutacion.txt",
+    "narracion_score": "narracion_score.txt",
+    "tension": "tension.txt",
+}
 CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
 
@@ -316,18 +321,25 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         receptor = Memetario.cargar(cuerpo.receptor_id, p)
         reloj = RelojSimple(datetime.fromisoformat(cuerpo.momento))
 
+        # El cristal se calcula acá para poder MOSTRAR la grieta (tensiones de la
+        # escucha); transmitir lo recibe ya hecho y no lo recalcula.
+        emb = _embeddings(p)
+        loadout = calcular_loadout(receptor, version.contenido, emb)
         nueva = transmitir(
-            cuerpo.emisor_id, receptor, version, grafo, _embeddings(p), _cliente(), reloj
+            cuerpo.emisor_id, receptor, version, grafo, emb, _cliente(), reloj,
+            loadout=loadout,
         )
 
+        tensiones = [t.model_dump() for t in loadout.tensiones]
         bitacora.registrar(p.carpeta, {
             "tipo": "transmision",
             "ser": cuerpo.receptor_id,
             "entrada": version.contenido,
             "salida": nueva.contenido,
-            "terminos": {"emisor": cuerpo.emisor_id, "distancia_raiz": nueva.distancia_raiz},
+            "terminos": {"emisor": cuerpo.emisor_id, "distancia_raiz": nueva.distancia_raiz,
+                         "tensiones": tensiones},
         })
-        return {"version": nueva.model_dump()}
+        return {"version": nueva.model_dump(), "tensiones": tensiones}
 
     @app.get("/clocks")
     def listar_clocks(p: Persistencia = Depends(dep_persistencia)):
@@ -379,6 +391,7 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
                 "dados": resolucion.dados_tirados,
                 "categoria": resolucion.categoria.value,
                 "empuje": cuerpo.empuje,
+                "tensiones": [t.model_dump() for t in contexto.loadout.tensiones],
             },
         })
         return {

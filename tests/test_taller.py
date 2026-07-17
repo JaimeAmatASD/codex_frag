@@ -238,6 +238,41 @@ def test_transmitir_muta_y_queda_en_grafo_y_bitacora(taller):
     assert "sabiendo todo" in entradas[0]["salida"]
 
 
+def test_transmitir_muestra_y_registra_la_grieta(taller):
+    import json as _json
+    taller.post("/mundos", json={"nombre": "taberna"})
+    # PF y operativo en tensión declarada, de peso parejo (9.0 y 8.0: diferencia
+    # normalizada 0.11, bajo el umbral): la grieta debe activarse al escuchar.
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero(memes=[
+        {"id": "PF-casa", "tipo": "fundacional", "texto": "Mi taberna es mi reino.",
+         "peso_inicial": 9.0, "tensiones": ["oido-fino"]},
+        {"id": "oido-fino", "tipo": "operativo", "texto": "Acá se escucha todo.",
+         "peso_inicial": 8.0, "costo": 20},
+    ]))
+    taller.post("/hechos?mundo=taberna", json={**HECHO, "testigo": "el_viejo_tomas"})
+    taller.cliente_llm.respuesta_por_defecto = _json.dumps({
+        "contenido_entendido": "Algo pasó en la bahía, y en mi taberna ya se sabe.",
+        "memes_resonantes": ["oido-fino"],
+    }, ensure_ascii=False)
+
+    r = taller.post("/transmitir?mundo=taberna", json={
+        "emisor_id": "el_viejo_tomas",
+        "receptor_id": "tabernero",
+        "version_id": "kraken-bahia-raiz",
+        "momento": "1850-03-01T09:00:00",
+    })
+
+    assert r.status_code == 200
+    tensiones = r.json()["tensiones"]
+    assert len(tensiones) == 1
+    assert {tensiones[0]["meme_a"], tensiones[0]["meme_b"]} == {"PF-casa", "oido-fino"}
+
+    # El prompt que viajó al LLM lleva la grieta, y la bitácora la registra.
+    assert "grieta" in taller.cliente_llm.llamadas[-1]
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert len(entradas[0]["terminos"]["tensiones"]) == 1
+
+
 def test_score_sin_clock_da_409(taller):
     _mundo_armado(taller)
     r = taller.post("/score/evaluar?mundo=taberna", json={
