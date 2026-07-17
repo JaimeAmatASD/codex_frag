@@ -98,6 +98,83 @@ def test_ser_id_con_ruta_da_400_y_no_escribe_fuera(taller):
     assert not (taller.raiz_mundos / "fuera").exists()
 
 
+# ----- Zona Mundo: el reloj y las singularidades -----
+
+def _singularidad(**extra):
+    base = {
+        "id": "el_hombre_pez",
+        "contenido": "La noche de la primera luna de sangre, en el risco aislado, "
+                     "cada uno de ellos se encuentra con un Hombre Pez.",
+        "momento": "1850-03-03T23:00:00",
+        "lugar": "el risco aislado",
+        "testigos_iniciales": ["pescador_supersticioso"],
+    }
+    base.update(extra)
+    return base
+
+
+def test_reloj_y_singularidad_de_punta_a_punta(taller):
+    taller.post("/mundos", json={"nombre": "costa"})
+    assert taller.get("/reloj?mundo=costa").json() == {"momento": None}
+    assert taller.post("/singularidades?mundo=costa", json=_singularidad()).status_code == 200
+    assert taller.get("/singularidades?mundo=costa").json()[0]["estado"] == "pendiente"
+
+    # Fijar la hora antes del momento: nada dispara.
+    r = taller.post("/reloj?mundo=costa", json={"momento": "1850-03-03T20:00:00"})
+    assert r.json()["disparadas"] == []
+
+    # Avanzar hasta la noche: dispara y aparece en Lore con su testigo.
+    r = taller.post("/reloj/avanzar?mundo=costa", json={"horas": 3})
+    assert r.json()["momento"] == "1850-03-03T23:00:00"
+    assert [s["id"] for s in r.json()["disparadas"]] == ["el_hombre_pez"]
+    assert taller.get("/singularidades?mundo=costa").json()[0]["estado"] == "disparada"
+    hechos = taller.get("/hechos?mundo=costa").json()
+    assert hechos[0]["hecho"]["id"] == "el_hombre_pez"
+    assert hechos[0]["versiones"][0]["conocida_por"] == ["pescador_supersticioso"]
+
+    # Avanzar de nuevo no la re-dispara (idempotencia, también vía la API).
+    r = taller.post("/reloj/avanzar?mundo=costa", json={"dias": 1})
+    assert r.json()["disparadas"] == []
+
+
+def test_editar_una_singularidad_reemplaza_por_id(taller):
+    taller.post("/mundos", json={"nombre": "costa"})
+    taller.post("/singularidades?mundo=costa", json=_singularidad())
+    taller.post("/singularidades?mundo=costa", json=_singularidad(lugar="la escollera"))
+
+    lista = taller.get("/singularidades?mundo=costa").json()
+    assert len(lista) == 1
+    assert lista[0]["lugar"] == "la escollera"
+
+
+def test_avanzar_sin_hora_fijada_da_409_y_avances_invalidos_400(taller):
+    taller.post("/mundos", json={"nombre": "costa"})
+    assert taller.post("/reloj/avanzar?mundo=costa", json={"horas": 1}).status_code == 409
+
+    taller.post("/reloj?mundo=costa", json={"momento": "1850-03-01T07:00:00"})
+    assert taller.post("/reloj/avanzar?mundo=costa", json={}).status_code == 400
+    assert taller.post("/reloj/avanzar?mundo=costa", json={"horas": -2}).status_code == 400
+
+
+def test_singularidad_con_momento_invalido_da_400(taller):
+    taller.post("/mundos", json={"nombre": "costa"})
+    r = taller.post("/singularidades?mundo=costa",
+                    json=_singularidad(momento="la primera luna de sangre"))
+    assert r.status_code == 400
+
+
+def test_reset_vuelve_pendiente_la_singularidad_y_borra_la_hora(taller):
+    taller.post("/mundos", json={"nombre": "costa"})
+    taller.post("/singularidades?mundo=costa", json=_singularidad())
+    # Fijar la hora MÁS ALLÁ del momento también dispara: el destino no se saltea.
+    r = taller.post("/reloj?mundo=costa", json={"momento": "1850-03-04T00:00:00"})
+    assert [s["id"] for s in r.json()["disparadas"]] == ["el_hombre_pez"]
+
+    taller.post("/reset?mundo=costa")
+    assert taller.get("/reloj?mundo=costa").json() == {"momento": None}
+    assert taller.get("/singularidades?mundo=costa").json()[0]["estado"] == "pendiente"
+
+
 # ----- Zona Personajes -----
 
 def _ser_tabernero(**extra):

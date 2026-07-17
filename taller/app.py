@@ -21,7 +21,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from codex.blades import HojaMecanica, SistemaBlades, narrar_resolucion
 from codex.clocks import Clock
@@ -41,6 +41,7 @@ from codex.reglas import (
     contexto_para,
 )
 from codex.reloj import RelojSimple
+from codex.singularidades import Singularidad, chequear_singularidades
 from codex.transmision import transmitir
 from taller import bitacora
 from taller.derivacion import derivar_ser
@@ -90,6 +91,26 @@ class CuerpoSer(BaseModel):
 
 class CuerpoDerivar(BaseModel):
     descripcion: str
+
+
+class CuerpoSingularidad(BaseModel):
+    """Semilla de una singularidad: el evento agendado que ocurre pase lo que pase."""
+
+    id: str
+    contenido: str
+    momento: str    # hora del MUNDO en ISO en que ocurrirá
+    lugar: str
+    origen: str = ""
+    testigos_iniciales: list[str] = []
+
+
+class CuerpoReloj(BaseModel):
+    momento: str    # hora del MUNDO en ISO
+
+
+class CuerpoAvance(BaseModel):
+    horas: int = 0
+    dias: int = 0
 
 
 class CuerpoTransmitir(BaseModel):
@@ -244,6 +265,58 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         carpeta = _carpeta_mundo(mundo)
         for nombre in ("estado.db", "grafo.json"):
             (carpeta / nombre).unlink(missing_ok=True)
+        return {"ok": True}
+
+    @app.get("/reloj")
+    def leer_reloj(p: Persistencia = Depends(dep_persistencia)):
+        return {"momento": p.leer_momento_mundo()}
+
+    @app.post("/reloj")
+    def fijar_reloj(cuerpo: CuerpoReloj, p: Persistencia = Depends(dep_persistencia)):
+        """Fija la hora del mundo. También chequea el destino: fijarla más allá
+        del momento de una singularidad pendiente la dispara."""
+        momento = datetime.fromisoformat(cuerpo.momento)   # inválida → ValueError → 400
+        disparadas = chequear_singularidades(p, GrafoMundo(p), momento)
+        p.guardar_momento_mundo(momento.isoformat())
+        return {"momento": momento.isoformat(),
+                "disparadas": [s.model_dump() for s in disparadas]}
+
+    @app.post("/reloj/avanzar")
+    def avanzar_reloj(cuerpo: CuerpoAvance, p: Persistencia = Depends(dep_persistencia)):
+        """Avanza el reloj del mundo y dispara las singularidades alcanzadas."""
+        actual = p.leer_momento_mundo()
+        if actual is None:
+            raise HTTPException(409, "El mundo no tiene hora todavía: fijala antes de avanzar.")
+        if cuerpo.horas < 0 or cuerpo.dias < 0 or (cuerpo.horas == 0 and cuerpo.dias == 0):
+            raise HTTPException(400, "El reloj avanza para adelante: horas o días positivos.")
+        nuevo = datetime.fromisoformat(actual) + timedelta(hours=cuerpo.horas, days=cuerpo.dias)
+        disparadas = chequear_singularidades(p, GrafoMundo(p), nuevo)
+        p.guardar_momento_mundo(nuevo.isoformat())
+        return {"momento": nuevo.isoformat(),
+                "disparadas": [s.model_dump() for s in disparadas]}
+
+    @app.get("/singularidades")
+    def listar_singularidades(p: Persistencia = Depends(dep_persistencia)):
+        """La semilla completa, cada una con su estado (pendiente/disparada)."""
+        disparadas = p.singularidades_disparadas()
+        return [
+            {**s.model_dump(), "estado": "disparada" if s.id in disparadas else "pendiente"}
+            for s in p.cargar_singularidades()
+        ]
+
+    @app.post("/singularidades")
+    def guardar_singularidad(
+        cuerpo: CuerpoSingularidad, p: Persistencia = Depends(dep_persistencia)
+    ):
+        """Crea o edita la semilla de una singularidad (por id). La marca de
+        'ya disparada' es estado vivo y no se toca desde acá."""
+        datetime.fromisoformat(cuerpo.momento)   # valida YA, no al avanzar el reloj
+        nueva = Singularidad(**cuerpo.model_dump())
+        lista = [s.model_dump() for s in p.cargar_singularidades() if s.id != nueva.id]
+        lista.append(nueva.model_dump())
+        (p.carpeta / "singularidades.json").write_text(
+            json.dumps(lista, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
         return {"ok": True}
 
     # ----- Zona Personajes -----
