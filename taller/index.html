@@ -246,6 +246,7 @@
             <option value="mutacion">mutación del rumor</option>
             <option value="narracion_score">narración del Score</option>
             <option value="dialogo">diálogo directo</option>
+            <option value="speculum">el espejo (speculum)</option>
           </select></div>
       </div>
       <textarea id="textoTemplate" style="min-height:22rem; font-family:monospace; font-size:.85rem;"></textarea>
@@ -506,9 +507,11 @@ async function cargarSeres() {
         <span class="chip">mana: ${ser.mana_max}</span>
         ${ser.hoja ? `<span class="chip">hoja: ${esc(Object.entries(ser.hoja.acciones).map(([a,r])=>a+' '+r).join(' · '))}</span>` : '<span class="chip">sin hoja</span>'}
         <button class="suave" data-ser="${esc(ser.ser_id)}" onclick="editarSer(this.dataset.ser)">editar</button>
+        <button class="accion" data-ser="${esc(ser.ser_id)}" onclick="mirarSer(this.dataset.ser, this)">Que se mire (LLM real)</button>
         <details><summary class="tenue">el cristal, viviendo (pesos y activaciones)</summary>
-          <table><tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}</table>
+          <table id="estado-${esc(ser.ser_id)}"><tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}</table>
         </details>
+        <div id="espejo-${esc(ser.ser_id)}"></div>
       </div>`);
   }
   const ids = seres.map(s => s.ser_id);
@@ -516,6 +519,59 @@ async function cargarSeres() {
   document.body.insertAdjacentHTML('beforeend',
     `<datalist id="listaIdsSeres">${ids.map(i => `<option>${esc(i)}</option>`).join('')}</datalist>`);
 }
+// ----- El espejo (SPECULUM): el ser se mira, el autor dispone -----
+
+async function mirarSer(serId, boton) {
+  const caja = document.getElementById(`espejo-${serId}`);
+  boton.disabled = true; boton.textContent = 'Se mira…';
+  try {
+    const r = await api('POST', '/speculum/mirar', {ser_id: serId});
+    if (!r.suficiente) {
+      caja.innerHTML = `<p class="tenue">Todavía no hay espejo: lleva ${r.movilizaciones} ` +
+        `movilizaciones registradas y el mínimo es ${r.minimo}. Que viva un poco más ` +
+        `(transmisiones, diálogos, Scores) y volvé a pedírselo.</p>`;
+      return;
+    }
+    window.PROPUESTAS = window.PROPUESTAS || {};
+    window.PROPUESTAS[serId] = r.propuestas;
+    caja.innerHTML = `<p style="font-style:italic; margin:.5rem 0;">«${esc(r.reflexion)}»</p>` +
+      (r.propuestas.length ? '' : '<p class="tenue">No se propone cambios: la evidencia no se los pide.</p>');
+    r.propuestas.forEach((p, i) => {
+      const que = p.tipo === 'ajustar_peso'
+        ? `mover el peso de <b>${esc(p.meme_id)}</b> en ${p.delta > 0 ? '+' : ''}${p.delta}`
+        : `probarse una idea nueva: <b>${esc(p.meme_id)}</b> — «${esc(p.texto)}» ` +
+          `(peso ${p.peso_inicial}, costo ${p.costo})`;
+      caja.insertAdjacentHTML('beforeend', `
+        <div id="prop-${esc(serId)}-${i}" style="margin:.4rem 0; padding:.5rem; border:1px dashed var(--borde); border-radius:8px;">
+          ${que}<br><span class="tenue">porque: ${esc(p.justificacion)}</span><br>
+          <button class="suave" onclick="aplicarPropuesta('${esc(serId)}', ${i}, this)">Aprobar</button>
+          <button class="suave" onclick="document.getElementById('prop-${esc(serId)}-${i}').remove()">Rechazar</button>
+        </div>`);
+    });
+  } finally { boton.disabled = false; boton.textContent = 'Que se mire (LLM real)'; }
+}
+
+async function aplicarPropuesta(serId, i, boton) {
+  boton.disabled = true;
+  try {
+    const r = await api('POST', '/speculum/aplicar', {ser_id: serId, propuesta: window.PROPUESTAS[serId][i]});
+    const e = r.efecto;
+    boton.closest('div').innerHTML = `<span class="verde">✔ aplicada — ` +
+      (e.antes !== undefined ? `peso de ${esc(e.meme)}: ${e.antes} → ${e.despues}`
+                             : `${esc(e.meme)} sembrado con peso ${e.sembrado}`) + '</span>';
+    await refrescarEstadoSer(serId);
+  } catch (err) { boton.disabled = false; }
+}
+
+async function refrescarEstadoSer(serId) {
+  const estado = await api('GET', `/seres/${encodeURIComponent(serId)}/estado`);
+  const filas = Object.entries(estado).map(([id, e]) =>
+    `<tr><td>${esc(id)}</td><td>${e.peso.toFixed(1)}</td><td>${e.veces_en_loadout}</td>
+     <td>${e.veces_movilizado}</td></tr>`).join('');
+  document.getElementById(`estado-${serId}`).innerHTML =
+    `<tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}`;
+}
+
 function editarSer(serId) {
   const ser = window.SERES.find(s => s.ser_id === serId);
   $('#tituloFormSer').textContent = `Editando: ${serId}`;

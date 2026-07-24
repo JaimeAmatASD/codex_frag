@@ -41,7 +41,15 @@ volver a ajustar**, sin tocar JSON ni terminal.
    peso, costo, conexiones), y la hoja mecánica (`stress_max`, acciones → rango
    0-4). Guarda `seres/<id>/ser.json` y `hoja_reglas.json`. Al lado de la semilla,
    **el estado vivo en solo lectura**: pesos actuales, veces en loadout, veces
-   movilizado — en quién se está convirtiendo el personaje.
+   movilizado — en quién se está convirtiendo el personaje. Y el **espejo**
+   (SPECULUM, mejora 05): el botón "que se mire" arma la trayectoria registrada
+   del ser (uso real de memes con sus silencios, grietas repetidas, cómo deformó
+   lo que le contaron) y el LLM devuelve una reflexión en primera persona más
+   propuestas tipadas de ajuste chico (degradé máx. 2 puntos, PF intocables,
+   experimentales que nacen humildes). El autor aprueba **de a una** (se aplica
+   por la puerta única y queda en la bitácora con su justificación) o rechaza
+   (no pasa nada). Sin material suficiente (10 movilizaciones) el Taller lo dice
+   y el LLM ni se llama. Manual y por ser: la cadencia la decide el autor.
 3. **Diálogo.** Hablarle directo a un ser, sin secreto ni emisor: escribís una
    escena, una pregunta o una línea de otro personaje, y responde en su voz con
    el cristal ACTUAL (calculado sobre la charla acumulada, turno a turno). Es
@@ -66,10 +74,11 @@ volver a ajustar**, sin tocar JSON ni terminal.
      tiene clock de amenaza, el taller ofrece crearlo.
    - *Correr tests*: `pytest -q` en subproceso, salida con verde/rojo.
 6. **Templates.** Editor de texto plano para `templates/mutacion.txt`,
-   `templates/narracion_score.txt` y `templates/dialogo.txt` — el lugar donde
-   los docs mandan iterar cuando las voces no revelan. Guardar y re-probar sin
-   salir de la página.
-7. **Bitácora.** Toda transmisión, todo Score y todo diálogo quedan registrados
+   `templates/narracion_score.txt`, `templates/dialogo.txt` y
+   `templates/speculum.txt` — el lugar donde los docs mandan iterar cuando las
+   voces no revelan. Guardar y re-probar sin salir de la página.
+7. **Bitácora.** Toda transmisión, todo Score, todo diálogo y toda mirada del
+   espejo (y cada propuesta aplicada, con su justificación) quedan registrados
    (entrada, salida, personaje, términos, fecha) en un JSONL por mundo dentro
    de `taller/bitacora/`. La zona lista las entradas y permite poner dos lado
    a lado: pulir es comparar.
@@ -78,13 +87,15 @@ volver a ajustar**, sin tocar JSON ni terminal.
 
 JSON simple: `GET/POST /mundos`, `GET/POST /seres`, `GET /seres/<id>/estado`,
 `POST /seres/<id>/pesos`, `GET/POST /hechos`, `POST /transmitir`, `POST /dialogo`,
-`POST /score/evaluar`, `POST /score/tirar`, `POST /tests`, `GET/PUT /templates/<nombre>`,
+`POST /speculum/mirar`, `POST /speculum/aplicar`, `POST /score/evaluar`,
+`POST /score/tirar`, `POST /tests`, `GET/PUT /templates/<nombre>`,
 `GET /bitacora`, `POST /reset`.
 Cada endpoint hace lo que los demos ya hacen (Persistencia, Memetario, GrafoMundo,
-transmitir, SistemaBlades, narrar_resolucion) — sin lógica nueva de motor, con una
-excepción a propósito: `/dialogo` trae `codex/dialogo.py`, un primitivo chico y
-nuevo (hablarle a un ser a partir de texto libre, sin Hecho ni emisor) que el
-motor todavía no tenía.
+transmitir, SistemaBlades, narrar_resolucion) — sin lógica nueva de motor, con dos
+excepciones a propósito: `/dialogo` trae `codex/dialogo.py` (hablarle a un ser a
+partir de texto libre, sin Hecho ni emisor) y `/speculum/*` trae `codex/speculum.py`
+(la autoobservación del núcleo irrenunciable: trayectoria → mirada → propuestas
+con fricción; rechazar no tiene endpoint — no tocar nada es no llamar a nada).
 
 ## Errores
 

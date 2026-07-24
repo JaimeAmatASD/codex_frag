@@ -70,6 +70,7 @@ TEMPLATES_EDITABLES = {
     "tension": "tension.txt",
     "derivar_ser": "derivar_ser.txt",
     "dialogo": "dialogo.txt",
+    "speculum": "speculum.txt",
 }
 CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
