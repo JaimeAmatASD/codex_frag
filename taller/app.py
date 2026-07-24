@@ -25,14 +25,23 @@ from datetime import datetime, timedelta
 
 from codex.blades import HojaMecanica, SistemaBlades, narrar_resolucion
 from codex.clocks import Clock
+from codex.decaimiento import PISO
 from codex.dialogo import responder_dialogo
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
 from codex.hechos import Hecho
 from codex.loadout import calcular_loadout
 from codex.memetario import Memetario
-from codex.modelos import Ser
+from codex.modelos import Meme, Ser
 from codex.persistencia import Persistencia
+from codex.speculum import (
+    MINIMO_MOVILIZACIONES,
+    Mirada,
+    Propuesta,
+    consultar_trayectoria,
+    mirarse,
+    validar_contra_ser,
+)
 from codex.reglas import (
     AccionDeclarada,
     ContextoAccion,
@@ -166,6 +175,20 @@ class CuerpoDialogo(BaseModel):
     ser_id: str
     historial: list[CuerpoTurno] = []
     mensaje: str
+
+
+class CuerpoMirar(BaseModel):
+    """Pedirle a un ser que se mire (SPECULUM, mejora 05)."""
+
+    ser_id: str
+
+
+class CuerpoAplicar(BaseModel):
+    """UNA propuesta aprobada por el autor. Se aprueba de a una: disponer es
+    elegir, no firmar un paquete."""
+
+    ser_id: str
+    propuesta: Propuesta
 
 
 class CuerpoPesos(BaseModel):
@@ -471,6 +494,84 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "terminos": {"tensiones": tensiones, "memes_activos": [m["id"] for m in memes_activos]},
         })
         return {"respuesta": respuesta, "tensiones": tensiones, "memes_activos": memes_activos}
+
+    # ----- El espejo (SPECULUM, mejora 05) -----
+
+    @app.post("/speculum/mirar")
+    def speculum_mirar(cuerpo: CuerpoMirar, mundo: str, p: Persistencia = Depends(dep_persistencia)):
+        """El ser se mira: trayectoria registrada → reflexión + propuestas.
+        Acá no se aplica NADA (el autor dispone en /speculum/aplicar, de a una).
+        Sin material suficiente se avisa claro y el LLM ni se llama."""
+        try:
+            ser = p.cargar_ser(cuerpo.ser_id)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        estado = p.leer_estado(cuerpo.ser_id)
+        entradas = [e for e in bitacora.leer(p.carpeta) if e.get("ser") == cuerpo.ser_id]
+        trayectoria = consultar_trayectoria(ser, estado, entradas)
+        if not trayectoria.suficiente:
+            return {
+                "suficiente": False,
+                "movilizaciones": trayectoria.movilizaciones,
+                "minimo": MINIMO_MOVILIZACIONES,
+            }
+        mirada, reintento = mirarse(ser, trayectoria, _cliente())
+        if mirada is None:
+            raise HTTPException(
+                422, "El espejo no devolvió una mirada válida: probá de nuevo o ajustá el template."
+            )
+        propuestas = [pr.model_dump() for pr in mirada.propuestas]
+        bitacora.registrar(p.carpeta, {
+            "tipo": "speculum",
+            "ser": cuerpo.ser_id,
+            "entrada": "(se mira)",
+            "salida": mirada.reflexion,
+            "terminos": {"propuestas": propuestas, "reintento": reintento},
+        })
+        return {"suficiente": True, "reflexion": mirada.reflexion, "propuestas": propuestas}
+
+    @app.post("/speculum/aplicar")
+    def speculum_aplicar(cuerpo: CuerpoAplicar, mundo: str, p: Persistencia = Depends(dep_persistencia)):
+        """Aprueba UNA propuesta del espejo. La fricción también en la puerta:
+        se revalida contra el ser (PF intocables, degradé) antes de tocar nada.
+        Rechazar no tiene endpoint: no tocar nada es no llamar a nada."""
+        try:
+            ser = p.cargar_ser(cuerpo.ser_id)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        prop = cuerpo.propuesta
+        # El handler de ValueError vuelve esto un 400 legible en el formulario.
+        validar_contra_ser(Mirada(reflexion="(aprobada por el autor)", propuestas=[prop]), ser)
+
+        if prop.tipo == "ajustar_peso":
+            Memetario(ser, p)   # garantiza estado sembrado antes de leerlo
+            actual = p.leer_estado(cuerpo.ser_id)[prop.meme_id].peso
+            # Mismo piso que el decaimiento: el peso nunca baja de la asíntota.
+            nuevo = max(PISO, actual + prop.delta)
+            p.actualizar_pesos(cuerpo.ser_id, {prop.meme_id: nuevo})
+            efecto = {"meme": prop.meme_id, "antes": actual, "despues": nuevo}
+            salida = f"peso de {prop.meme_id}: {actual:g} → {nuevo:g}"
+        else:   # proponer_experimental: entra a la SEMILLA y se siembra su estado
+            ser.memes.append(Meme(
+                id=prop.meme_id, tipo="experimental", texto=prop.texto,
+                peso_inicial=prop.peso_inicial, costo=prop.costo,
+            ))
+            (p.carpeta_seres / ser.ser_id / "ser.json").write_text(
+                json.dumps(ser.model_dump(), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            Memetario(ser, p)   # siembra el meme nuevo (INSERT OR IGNORE: no pisa nada)
+            efecto = {"meme": prop.meme_id, "sembrado": prop.peso_inicial}
+            salida = f"meme experimental sembrado: {prop.meme_id} (peso {prop.peso_inicial:g})"
+
+        bitacora.registrar(p.carpeta, {
+            "tipo": "speculum_aplicada",
+            "ser": cuerpo.ser_id,
+            "entrada": json.dumps(prop.model_dump(), ensure_ascii=False),
+            "salida": salida,
+            "terminos": {"justificacion": prop.justificacion},
+        })
+        return {"ok": True, "efecto": efecto}
 
     # ----- Zona Probar -----
 

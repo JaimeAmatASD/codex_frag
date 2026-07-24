@@ -5,11 +5,14 @@ encoder de vectores falso, mundos en tmp_path. La página HTML no se testea acá
 (es una vista fina); el dictado y la lectura son features del navegador.
 """
 
+import json
+
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from codex.llm import MockClient
+from codex.persistencia import Persistencia
 from taller.app import crear_app
 
 VECTORES = {}  # los tests que midan afinidades reales cargan acá sus vectores
@@ -348,6 +351,128 @@ def test_modo_editar_mueve_el_peso_vivo_y_el_dialogo_siguiente_lo_ve(taller):
     # La semilla no se tocó: el modo editar es sobre el estado vivo, no ser.json.
     ser = taller.get("/seres?mundo=taberna").json()[0]
     assert ser["memes"][1]["peso_inicial"] == 6.0
+
+
+# ----- El espejo (SPECULUM) -----
+
+MIRADA_JSON = json.dumps({
+    "reflexion": "Escucho todo y no cuento casi nada: estoy siendo el que acumula.",
+    "propuestas": [
+        {"tipo": "ajustar_peso", "meme_id": "oido-fino", "delta": 1.5,
+         "justificacion": "usada en casi todas las situaciones registradas"},
+        {"tipo": "proponer_experimental", "meme_id": "sospecha_del_silencio",
+         "texto": "Callar también es una forma de mentir.", "peso_inicial": 2.0,
+         "costo": 10, "justificacion": "las grietas repetidas giran en lo que callo"},
+    ],
+})
+
+
+def _acumular_movilizaciones(taller, veces=12):
+    """Arma trayectoria real por la puerta única: N usos efectivos de oido-fino."""
+    p = Persistencia(taller.raiz_mundos / "taberna")
+    for i in range(veces):
+        p.registrar_activaciones(
+            "tabernero", f"1850-03-01T{10 + i % 12}:00:00", "charla en la barra",
+            ["PF-casa", "oido-fino"], ["oido-fino"],
+        )
+    p.cerrar()
+
+
+def test_speculum_sin_material_avisa_claro_y_no_llama_al_llm(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+
+    r = taller.post("/speculum/mirar?mundo=taberna", json={"ser_id": "tabernero"})
+
+    assert r.status_code == 200
+    assert r.json() == {"suficiente": False, "movilizaciones": 0, "minimo": 10}
+    assert taller.cliente_llm.llamadas == []   # el espejo calla: ni una llamada
+
+
+def test_speculum_mirar_lista_propuestas_sin_aplicar_nada(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    _acumular_movilizaciones(taller)
+    taller.cliente_llm.respuesta_por_defecto = MIRADA_JSON
+
+    r = taller.post("/speculum/mirar?mundo=taberna", json={"ser_id": "tabernero"})
+
+    assert r.status_code == 200
+    cuerpo = r.json()
+    assert cuerpo["suficiente"] is True
+    assert "acumula" in cuerpo["reflexion"]
+    assert [p["tipo"] for p in cuerpo["propuestas"]] == ["ajustar_peso", "proponer_experimental"]
+
+    # NADA se aplicó: ni el peso vivo ni la semilla.
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["oido-fino"]["peso"] == 6.0
+    assert "sospecha_del_silencio" not in estado
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+    assert len(ser["memes"]) == 2
+
+    # Pero la mirada queda en la bitácora, propuestas incluidas.
+    entrada = taller.get("/bitacora?mundo=taberna").json()[0]
+    assert entrada["tipo"] == "speculum"
+    assert len(entrada["terminos"]["propuestas"]) == 2
+
+
+def test_aprobar_un_ajuste_mueve_el_peso_vivo_y_registra_la_justificacion(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+
+    r = taller.post("/speculum/aplicar?mundo=taberna", json={
+        "ser_id": "tabernero",
+        "propuesta": {"tipo": "ajustar_peso", "meme_id": "oido-fino", "delta": 1.5,
+                      "justificacion": "usada en casi todas las situaciones"},
+    })
+
+    assert r.status_code == 200
+    assert r.json()["efecto"] == {"meme": "oido-fino", "antes": 6.0, "despues": 7.5}
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["oido-fino"]["peso"] == 7.5
+    # La semilla no se tocó (regla 1): el ajuste es sobre el estado vivo.
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+    assert ser["memes"][1]["peso_inicial"] == 6.0
+
+    entrada = taller.get("/bitacora?mundo=taberna").json()[0]
+    assert entrada["tipo"] == "speculum_aplicada"
+    assert entrada["terminos"]["justificacion"] == "usada en casi todas las situaciones"
+
+
+def test_aprobar_un_experimental_entra_a_la_semilla_y_se_siembra(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+
+    r = taller.post("/speculum/aplicar?mundo=taberna", json={
+        "ser_id": "tabernero",
+        "propuesta": {"tipo": "proponer_experimental", "meme_id": "sospecha_del_silencio",
+                      "texto": "Callar también es una forma de mentir.",
+                      "peso_inicial": 2.0, "costo": 10,
+                      "justificacion": "las grietas repetidas giran en lo que callo"},
+    })
+
+    assert r.status_code == 200
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+    nuevo = next(m for m in ser["memes"] if m["id"] == "sospecha_del_silencio")
+    assert nuevo["tipo"] == "experimental"
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["sospecha_del_silencio"]["peso"] == 2.0   # sembrado, vivo
+
+
+def test_aplicar_sobre_una_piedra_fundacional_se_rechaza(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+
+    r = taller.post("/speculum/aplicar?mundo=taberna", json={
+        "ser_id": "tabernero",
+        "propuesta": {"tipo": "ajustar_peso", "meme_id": "PF-casa", "delta": -2.0,
+                      "justificacion": "ya no siento que sea mi reino"},
+    })
+
+    assert r.status_code == 400
+    assert "piedra fundacional" in r.json()["detail"]
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["PF-casa"]["peso"] == 9.0   # intocable, intocada
 
 
 # ----- Zona Lore -----
