@@ -1,0 +1,86 @@
+{
+  "ser_id": "doctor_tenantien",
+  "mana_max": 60,
+  "memes": [
+    {
+      "id": "vision_trascendental",
+      "tipo": "fundacional",
+      "texto": "Mi destino es desentrañar los grandes misterios olvidados del mundo, aunque mi entorno me crea un obstinado insensato.",
+      "peso_inicial": 8.5,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "identitario",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "culto_a_la_gorda",
+      "tipo": "fundacional",
+      "texto": "No hay gran empresa ni ruina antigua que valga la pena si mi estómago no está bien colmado de té, bizcochos y jamón.",
+      "peso_inicial": 8.5,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [
+        "vision_trascendental"
+      ],
+      "funcion": "emocional",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "deseo_naquetun",
+      "tipo": "operativo",
+      "texto": "Quiero llevar a cabo mi expedición hacia las ruinas de Naquetun descritas en el apéndice 147.",
+      "peso_inicial": 6.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "estrategico",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "miedo_violencia_irracional",
+      "tipo": "operativo",
+      "texto": "No puedo tolerar la crueldad ni la muerte injustificada nacida de la ignorancia o el pánico de los hombres.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "moral",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "sesgo_lo_importante_en_la_nota",
+      "tipo": "operativo",
+      "texto": "La verdad y lo prodigioso nunca están en la superficie ni en la norma, sino en las notas al pie y en los detalles desatendidos.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "perceptivo",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "ofuscacion_academica",
+      "tipo": "operativo",
+      "texto": "Cuando no quiero que entiendan mis verdaderas intenciones, las envuelvo en explicaciones confusas, eructos y proyectos ambiguos.",
+      "peso_inicial": 5.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "estrategico",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "persuasion_ontologica",
+      "tipo": "experimental",
+      "texto": "Estoy probando que la realidad, la muerte e incluso el alma ceden si se las somete a un juego de preguntas y respuestas suficientemente riguroso.",
+      "peso_inicial": 4.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "estrategico",
+      "aprendizaje": "normal"
+    }
+  ],
+  "origen": "prueba"
+}

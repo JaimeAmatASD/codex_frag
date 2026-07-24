@@ -1,0 +1,86 @@
+{
+  "ser_id": "becario_ripentel",
+  "mana_max": 50,
+  "memes": [
+    {
+      "id": "ley_elocuencia_divina",
+      "tipo": "fundacional",
+      "texto": "No es que sea presuntuoso, sino que la elocuente elocuencia me persigue paso a paso y estoy destinado a obrar bien.",
+      "peso_inicial": 8.5,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "identitario",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "ley_iman_de_aciertos",
+      "tipo": "fundacional",
+      "texto": "A cierta gente la persiguen los mosquitos, pero a mí me persiguen los aciertos en cada empresa que emprendo.",
+      "peso_inicial": 8.5,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "perceptivo",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "deseo_reconocimiento_sublime",
+      "tipo": "operativo",
+      "texto": "Deseo que todos reconozcan que soy un ser de sustancia divina que bajó a enseñarle al hombre la diferencia entre lo bello y lo banal.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "emocional",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "miedo_revelarse_vulgar",
+      "tipo": "operativo",
+      "texto": "Jamás puedo admitir que soy un sujeto ordinario o que caigo en la vulgaridad del humor fácil y la mediocridad.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [
+        "deseo_reconocimiento_sublime"
+      ],
+      "funcion": "moral",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "sesgo_protagonismo_prodigioso",
+      "tipo": "operativo",
+      "texto": "Cualquier hecho prodigioso o solución milagrosa que ocurra a mi alrededor siempre me tiene a mí como el verdadero protagonista.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "perceptivo",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "mentira_martir_magnanimo",
+      "tipo": "operativo",
+      "texto": "Cuando debo atribuirme hechos graves o mentir, lo hago disfrazándome de héroe magnánimo que protege a seres involuntariamente inferiores.",
+      "peso_inicial": 5.5,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "estrategico",
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "exp_muerte_como_persuasion",
+      "tipo": "experimental",
+      "texto": "Quizás la muerte no sea un estado irreversible, sino una convicción equivocada del cuerpo y del alma que se puede convencer de lo contrario.",
+      "peso_inicial": 4.0,
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "perceptivo",
+      "aprendizaje": "normal"
+    }
+  ],
+  "origen": "prueba"
+}

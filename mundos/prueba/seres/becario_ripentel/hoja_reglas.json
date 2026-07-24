@@ -1,0 +1,10 @@
+{
+  "ser_id": "becario_ripentel",
+  "stress_max": 9,
+  "acciones": {
+    "elocuencia_pomposa": 3,
+    "atribuirse_meritos": 3,
+    "pose_heroica": 2,
+    "anotacion_erudita": 1
+  }
+}

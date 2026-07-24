@@ -6,20 +6,26 @@
       "id": "el olvido",
       "tipo": "operativo",
       "texto": "mi memoria es finita, es como un libro de paginas limitadas, que con el tiempo debo borrar para poder sumar recuerdos nuevos",
-      "peso_inicial": 5.0,
+      "peso_inicial": 9.0,
       "costo": 20,
       "conexiones": [],
-      "tensiones": ["conosco esta tierra, es mi cuerpo"],
-      "funcion": "identitario"
+      "tensiones": [
+        "conosco esta tierra",
+        "es mi cuerpo"
+      ],
+      "funcion": "identitario",
+      "aprendizaje": "normal"
     },
     {
       "id": "conosco esta tierra, es mi cuerpo",
       "tipo": "operativo",
       "texto": "conosco cada rincon de mis tierras, sus tiempos y sus humores",
-      "peso_inicial": 5.0,
+      "peso_inicial": 3.0,
       "costo": 20,
       "conexiones": [],
-      "funcion": "perceptivo"
+      "tensiones": [],
+      "funcion": "perceptivo",
+      "aprendizaje": "normal"
     },
     {
       "id": "Los Dioses existen",
@@ -27,7 +33,10 @@
       "texto": "Los Dioses existen, y son terribles.",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
     },
     {
       "id": "El bien existe",
@@ -35,7 +44,10 @@
       "texto": "El bien existe, si se lo  cultiva.",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
     },
     {
       "id": "Solo Existo aqui",
@@ -43,7 +55,10 @@
       "texto": "No puedo dejar estas tierras, y no recuerdo por que",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
     },
     {
       "id": "El hombre es bueno,, pero si se lo vigila es mejor",
@@ -51,7 +66,10 @@
       "texto": "El hombre es bueno, pero si se lo vigila es mejor",
       "peso_inicial": 5.0,
       "costo": 20,
-      "conexiones": []
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
     }
   ],
   "origen": "es un hombre antiguo, atado a las costas donde habita el kraken dios carnicero de los hombres pescado."

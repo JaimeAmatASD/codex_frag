@@ -279,6 +279,77 @@ def test_derivar_degrada_con_mensaje_claro_y_sin_guardar(taller):
     assert taller.get("/bitacora?mundo=taberna").json() == []
 
 
+# ----- Zona Diálogo -----
+
+def test_dialogo_responde_y_no_toca_pesos_ni_activaciones(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    taller.cliente_llm.respuesta_por_defecto = "Acá se escucha todo, forastero."
+
+    r = taller.post("/dialogo?mundo=taberna", json={
+        "ser_id": "tabernero", "historial": [],
+        "mensaje": "Un forastero te pregunta hace cuánto que existe esta taberna.",
+    })
+
+    assert r.status_code == 200
+    cuerpo = r.json()
+    assert cuerpo["respuesta"] == "Acá se escucha todo, forastero."
+    assert {m["id"] for m in cuerpo["memes_activos"]} == {"PF-casa", "oido-fino"}
+
+    # Exploración, no transmisión: el peso vivo no se mueve.
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["oido-fino"]["peso"] == 6.0
+    assert estado["oido-fino"]["veces_movilizado"] == 0
+
+    # Pero sí queda en la bitácora, para comparar intentos.
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "dialogo"
+    assert entradas[0]["ser"] == "tabernero"
+    assert entradas[0]["salida"] == "Acá se escucha todo, forastero."
+
+
+def test_dialogo_manda_el_historial_completo_al_prompt(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    taller.cliente_llm.respuesta_por_defecto = "..."
+
+    taller.post("/dialogo?mundo=taberna", json={
+        "ser_id": "tabernero",
+        "historial": [
+            {"quien": "vos", "texto": "hace cuánto que existe esta taberna?"},
+            {"quien": "tabernero", "texto": "más de lo que quiero acordarme."},
+        ],
+        "mensaje": "y quién la construyó?",
+    })
+
+    prompt = taller.cliente_llm.llamadas[-1]
+    assert "hace cuánto que existe esta taberna?" in prompt
+    assert "más de lo que quiero acordarme." in prompt
+    assert "y quién la construyó?" in prompt
+
+
+def test_dialogo_ser_inexistente_da_404(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    r = taller.post("/dialogo?mundo=taberna", json={
+        "ser_id": "fantasma", "historial": [], "mensaje": "hola?",
+    })
+    assert r.status_code == 404
+
+
+def test_modo_editar_mueve_el_peso_vivo_y_el_dialogo_siguiente_lo_ve(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+
+    r = taller.post("/seres/tabernero/pesos?mundo=taberna", json={"pesos": {"oido-fino": 1.0}})
+    assert r.status_code == 200
+
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["oido-fino"]["peso"] == 1.0
+    # La semilla no se tocó: el modo editar es sobre el estado vivo, no ser.json.
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+    assert ser["memes"][1]["peso_inicial"] == 6.0
+
+
 # ----- Zona Lore -----
 
 HECHO = {

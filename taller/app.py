@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 
 from codex.blades import HojaMecanica, SistemaBlades, narrar_resolucion
 from codex.clocks import Clock
+from codex.dialogo import responder_dialogo
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
 from codex.hechos import Hecho
@@ -59,6 +60,7 @@ TEMPLATES_EDITABLES = {
     "narracion_score": "narracion_score.txt",
     "tension": "tension.txt",
     "derivar_ser": "derivar_ser.txt",
+    "dialogo": "dialogo.txt",
 }
 CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
@@ -147,6 +149,30 @@ class CuerpoTemplate(BaseModel):
 
 class CuerpoTests(BaseModel):
     ruta: str = "."   # relativa a la carpeta de tests del repo; default: toda la suite
+
+
+class CuerpoTurno(BaseModel):
+    """Un renglón de la charla: quién habló ('vos' o el ser_id) y qué dijo."""
+
+    quien: str
+    texto: str
+
+
+class CuerpoDialogo(BaseModel):
+    """El historial previo (sin el mensaje nuevo) + lo que decís/narrás ahora.
+    El estado de la charla viaja con la página, como en Score: el servidor no
+    guarda nada entre turnos."""
+
+    ser_id: str
+    historial: list[CuerpoTurno] = []
+    mensaje: str
+
+
+class CuerpoPesos(BaseModel):
+    """El modo editar del diálogo: tocar el peso VIVO a mano, la puerta única
+    (Persistencia.actualizar_pesos), aparte de la semilla en ser.json."""
+
+    pesos: dict[str, float]
 
 
 def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
@@ -407,6 +433,44 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
     def estado_ser(ser_id: str, p: Persistencia = Depends(dep_persistencia)):
         """El cristal evolucionando, solo lectura: pesos actuales y activaciones."""
         return {mid: e.model_dump() for mid, e in p.leer_estado(ser_id).items()}
+
+    @app.post("/seres/{ser_id}/pesos")
+    def editar_pesos_vivos(
+        ser_id: str, cuerpo: CuerpoPesos, mundo: str, p: Persistencia = Depends(dep_persistencia)
+    ):
+        """Modo editar del diálogo: tocar el peso vivo a mano, por la puerta única.
+        No es la semilla (regla 1): un peso ya evolucionado no se pisa por accidente
+        al guardar ser.json, pero acá el autor SÍ puede moverlo a propósito."""
+        p.actualizar_pesos(ser_id, cuerpo.pesos)
+        return {"ok": True}
+
+    # ----- Zona Diálogo -----
+
+    @app.post("/dialogo")
+    def dialogo(cuerpo: CuerpoDialogo, mundo: str, p: Persistencia = Depends(dep_persistencia)):
+        """Hablarle directo a un ser: sin hecho, sin emisor, sin secreto. El
+        cristal se calcula sobre la charla acumulada tal como está AHORA; no
+        registra activaciones ni mueve pesos (eso es /seres/{id}/pesos, aparte).
+        Queda en la bitácora para comparar intentos, como transmitir y Score."""
+        try:
+            memetario = Memetario.cargar(cuerpo.ser_id, p)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        historial = [t.model_dump() for t in cuerpo.historial] + [
+            {"quien": "vos", "texto": cuerpo.mensaje}
+        ]
+        respuesta, loadout = responder_dialogo(memetario, historial, _cliente(), _embeddings(p))
+
+        tensiones = [t.model_dump() for t in loadout.tensiones]
+        memes_activos = [{"id": m.id, "texto": m.texto, "peso": m.peso} for m in loadout.seleccionados]
+        bitacora.registrar(p.carpeta, {
+            "tipo": "dialogo",
+            "ser": cuerpo.ser_id,
+            "entrada": cuerpo.mensaje,
+            "salida": respuesta,
+            "terminos": {"tensiones": tensiones, "memes_activos": [m["id"] for m in memes_activos]},
+        })
+        return {"respuesta": respuesta, "tensiones": tensiones, "memes_activos": memes_activos}
 
     # ----- Zona Probar -----
 

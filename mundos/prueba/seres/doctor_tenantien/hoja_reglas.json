@@ -1,0 +1,10 @@
+{
+  "ser_id": "doctor_tenantien",
+  "stress_max": 9,
+  "acciones": {
+    "dialectica_resucitadora": 4,
+    "investigacion_arcana": 3,
+    "resolucion_ingeniosa": 3,
+    "ingestion_prodigiosa": 2
+  }
+}

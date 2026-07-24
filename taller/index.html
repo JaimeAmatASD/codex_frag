@@ -48,7 +48,9 @@
   td, th { border-bottom:1px solid var(--borde); padding:.3rem .5rem; text-align:left; }
   th { color:var(--tenue); font-weight:normal; }
   .meme-fila, .accion-fila { display:flex; gap:.4rem; margin:.3rem 0; flex-wrap:wrap; }
+  .meme-fila { border:1px solid var(--borde); border-radius:8px; padding:.5rem; }
   .meme-fila input, .accion-fila input, .meme-fila select { flex:1; min-width:5rem; }
+  .meme-fila .m-texto, .meme-fila .m-conexiones, .meme-fila .m-tensiones { flex-basis:100%; min-width:16rem; }
   .comparar { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
   @media (max-width:700px){ .comparar { grid-template-columns:1fr; } }
   pre.salida { background:#101216; padding:.8rem; border-radius:8px; overflow-x:auto;
@@ -153,6 +155,35 @@
     </div>
   </section>
 
+  <!-- ================= DIÁLOGO ================= -->
+  <section id="zona-dialogo">
+    <div class="panel">
+      <h2>Hablarle directo — sin secreto, sin emisor</h2>
+      <p class="tenue">Escribí lo que quieras: una escena narrada ("un forastero te pregunta
+      hace cuánto que está esa ruina"), una pregunta directa, o una línea de otro personaje.
+      Responde con su cristal ACTUAL. Es exploración: no mueve pesos ni queda en su memoria
+      (regla 4) — pero sí queda en la bitácora para comparar intentos.</p>
+      <div class="fila">
+        <div><label>con quién hablás</label>
+          <select id="dlgSer" onchange="elegirSerDialogo(this.value)"></select></div>
+        <button class="suave" onclick="reiniciarDialogo()">Reiniciar charla</button>
+      </div>
+      <div id="dlgTranscripcion"></div>
+      <label style="margin-top:.8rem">tu mensaje o la escena <button class="mic" data-mic="dlgMensaje">🎙</button></label>
+      <textarea id="dlgMensaje" rows="2"></textarea>
+      <button class="accion" onclick="enviarMensajeDialogo(this)">Decir (LLM real)</button>
+    </div>
+    <div class="panel">
+      <details id="dlgModoEditar">
+        <summary><b>Modo editar</b> — tocar sus pesos vivos a mano, sin salir de la charla</summary>
+        <p class="tenue">Esto cambia el ESTADO VIVO del personaje (no la semilla): el próximo
+        turno de la charla ya lo va a ver. Como hablarle en sueños, no dirigir a un actor.</p>
+        <div id="dlgPesos" class="tenue">elegí un personaje arriba</div>
+        <button class="suave" onclick="guardarPesosDialogo()">Guardar pesos</button>
+      </details>
+    </div>
+  </section>
+
   <!-- ================= LORE ================= -->
   <section id="zona-lore">
     <div class="panel">
@@ -214,6 +245,7 @@
           <select id="selTemplate" onchange="cargarTemplate()">
             <option value="mutacion">mutación del rumor</option>
             <option value="narracion_score">narración del Score</option>
+            <option value="dialogo">diálogo directo</option>
           </select></div>
       </div>
       <textarea id="textoTemplate" style="min-height:22rem; font-family:monospace; font-size:.85rem;"></textarea>
@@ -259,10 +291,11 @@ async function api(metodo, ruta, cuerpo) {
 }
 
 /* ---------- pestañas ---------- */
-const ZONAS = [['mundo','Mundo'],['personajes','Personajes'],['lore','Lore'],
+const ZONAS = [['mundo','Mundo'],['personajes','Personajes'],['dialogo','Diálogo'],['lore','Lore'],
                ['probar','Probar'],['templates','Templates'],['bitacora','Bitácora']];
-const CARGADORES = {mundo: cargarMundo, personajes: cargarSeres, lore: cargarArboles,
-                    probar: cargarProbar, templates: cargarTemplate, bitacora: cargarBitacora};
+const CARGADORES = {mundo: cargarMundo, personajes: cargarSeres, dialogo: cargarDialogo,
+                    lore: cargarArboles, probar: cargarProbar, templates: cargarTemplate,
+                    bitacora: cargarBitacora};
 function armarPestanas() {
   $('#pestanas').innerHTML = ZONAS.map(([id, titulo]) =>
     `<button id="tab-${id}" onclick="mostrarZona('${id}')">${titulo}</button>`).join('');
@@ -324,6 +357,12 @@ function pesosMovidos(pesos) {
   return entradas.length ? `<br><span class="tenue">⚗ pesos que se movieron: ${
     entradas.map(([id, [a, d]]) => `${esc(id)} ${a.toFixed(1)} → ${d.toFixed(1)}`).join(' · ')
   }</span>` : '';
+}
+function chipsMemesActivos(memes) {
+  // El cristal reaccionando: qué memes entraron al loadout para esta respuesta.
+  return (memes || []).length
+    ? `<br>${memes.map(m => `<span class="chip" title="peso ${m.peso.toFixed(1)}">${esc(m.texto)}</span>`).join('')}`
+    : '';
 }
 
 /* ---------- mundo ---------- */
@@ -418,25 +457,25 @@ function filaMeme(m = {}) {
   const div = document.createElement('div');
   div.className = 'meme-fila';
   div.innerHTML = `
-    <input placeholder="id" class="m-id" value="${esc(m.id || '')}">
-    <select class="m-tipo">
+    <input placeholder="texto del meme" class="m-texto" value="${esc(m.texto || '')}">
+    <input placeholder="id" class="m-id" style="max-width:11rem" value="${esc(m.id || '')}">
+    <select class="m-tipo" style="max-width:9rem">
       ${['fundacional','operativo','experimental'].map(t =>
         `<option ${m.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
     </select>
-    <input placeholder="texto del meme" class="m-texto" style="flex:3" value="${esc(m.texto || '')}">
     <input placeholder="peso" class="m-peso" type="number" step="0.5" style="max-width:5rem" value="${m.peso_inicial ?? 5}">
     <input placeholder="costo" class="m-costo" type="number" style="max-width:5rem" value="${m.costo ?? 20}">
-    <select class="m-funcion" title="qué clase de lente es (opcional)">
+    <select class="m-funcion" title="qué clase de lente es (opcional)" style="max-width:10rem">
       <option value="">sin función</option>
       ${['perceptivo','estrategico','moral','identitario','emocional'].map(f =>
         `<option ${m.funcion === f ? 'selected' : ''}>${f}</option>`).join('')}
     </select>
-    <select class="m-aprendizaje" title="cómo aprende ante la contradicción (experimento 04)">
+    <select class="m-aprendizaje" title="cómo aprende ante la contradicción (experimento 04)" style="max-width:10rem">
       ${['normal','se_radicaliza','solo_trauma','se_erosiona'].map(a =>
         `<option ${(m.aprendizaje || 'normal') === a ? 'selected' : ''}>${a}</option>`).join('')}
     </select>
-    <input placeholder="conexiones (ids, coma)" class="m-conexiones" value="${esc((m.conexiones || []).join(', '))}">
-    <input placeholder="tensiones (ids, coma)" class="m-tensiones" title="memes con los que no puede convivir en paz" value="${esc((m.tensiones || []).join(', '))}">
+    <input placeholder="conexiones (ids, coma)" class="m-conexiones" style="flex:1" value="${esc((m.conexiones || []).join(', '))}">
+    <input placeholder="tensiones (ids, coma)" class="m-tensiones" title="memes con los que no puede convivir en paz" style="flex:1" value="${esc((m.tensiones || []).join(', '))}">
     <button class="suave" style="margin:0" onclick="this.parentElement.remove()">×</button>`;
   return div;
 }
@@ -537,6 +576,74 @@ async function guardarSer() {
   await api('POST', '/seres', cuerpo);
   $('#tituloFormSer').textContent = 'Crear un ser';
   await cargarSeres();
+}
+
+/* ---------- diálogo directo ---------- */
+window.DIALOGO = {serId: '', historial: []};
+
+async function cargarDialogo() {
+  const seres = await api('GET', '/seres');
+  window.SERES = seres;
+  $('#dlgSer').innerHTML = seres.length
+    ? seres.map(s => `<option ${s.ser_id === window.DIALOGO.serId ? 'selected' : ''}>${esc(s.ser_id)}</option>`).join('')
+    : '<option value="">(sin personajes en este mundo)</option>';
+  const serId = window.DIALOGO.serId && seres.some(s => s.ser_id === window.DIALOGO.serId)
+    ? window.DIALOGO.serId : (seres[0]?.ser_id || '');
+  await elegirSerDialogo(serId);
+}
+async function elegirSerDialogo(serId) {
+  window.DIALOGO = {serId, historial: []};
+  $('#dlgSer').value = serId;
+  renderizarTranscripcion();
+  await cargarPesosPanel(serId);
+}
+function reiniciarDialogo() {
+  window.DIALOGO.historial = [];
+  renderizarTranscripcion();
+}
+function renderizarTranscripcion() {
+  const h = window.DIALOGO.historial;
+  $('#dlgTranscripcion').innerHTML = h.length ? h.map(t => t.quien === 'vos'
+    ? `<div class="resultado"><span class="tenue">vos:</span> «${esc(t.texto)}»</div>`
+    : `<div class="resultado"><span class="tenue">${esc(t.quien)}:</span> «${esc(t.texto)}» ${botonHablar(t.texto)}</div>`
+  ).join('') : '<p class="tenue">Todavía no le dijiste nada.</p>';
+}
+async function enviarMensajeDialogo(boton) {
+  const serId = window.DIALOGO.serId;
+  const mensaje = $('#dlgMensaje').value.trim();
+  if (!serId) { banner('Elegí primero con quién hablás.'); return; }
+  if (!mensaje) return;
+  boton.disabled = true; boton.textContent = 'Piensa…';
+  try {
+    const r = await api('POST', '/dialogo', {
+      ser_id: serId, historial: window.DIALOGO.historial, mensaje,
+    });
+    window.DIALOGO.historial.push({quien: 'vos', texto: mensaje});
+    window.DIALOGO.historial.push({quien: serId, texto: r.respuesta});
+    renderizarTranscripcion();
+    $('#dlgTranscripcion').insertAdjacentHTML('beforeend',
+      `<div class="tenue">${grietas(r.tensiones)}${chipsMemesActivos(r.memes_activos)}</div>`);
+    $('#dlgMensaje').value = '';
+  } finally { boton.disabled = false; boton.textContent = 'Decir (LLM real)'; }
+}
+async function cargarPesosPanel(serId) {
+  if (!serId) { $('#dlgPesos').innerHTML = 'elegí un personaje arriba'; return; }
+  const ser = (window.SERES || []).find(s => s.ser_id === serId);
+  const estado = await api('GET', `/seres/${encodeURIComponent(serId)}/estado`);
+  $('#dlgPesos').innerHTML = (ser?.memes || []).map(m => `
+    <div class="fila" style="align-items:center">
+      <div style="flex:3" class="tenue">${esc(m.texto)}</div>
+      <div style="max-width:6rem">
+        <input class="dlg-peso" type="number" step="0.5" data-meme="${esc(m.id)}"
+               value="${(estado[m.id]?.peso ?? m.peso_inicial).toFixed(1)}"></div>
+    </div>`).join('') || 'este personaje no tiene memes.';
+}
+async function guardarPesosDialogo() {
+  const pesos = {};
+  document.querySelectorAll('.dlg-peso').forEach(i => { pesos[i.dataset.meme] = parseFloat(i.value); });
+  if (!Object.keys(pesos).length) return;
+  await api('POST', `/seres/${encodeURIComponent(window.DIALOGO.serId)}/pesos`, {pesos});
+  await cargarPesosPanel(window.DIALOGO.serId);
 }
 
 /* ---------- lore ---------- */

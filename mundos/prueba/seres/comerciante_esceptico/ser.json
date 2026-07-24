@@ -1,34 +1,51 @@
 {
   "ser_id": "comerciante_esceptico",
-  "origen": "prueba",
   "mana_max": 40,
   "memes": [
     {
       "id": "PF-todo-precio",
       "tipo": "fundacional",
       "texto": "Todo tiene una explicación natural y un precio.",
-      "peso_inicial": 9.0
+      "peso_inicial": 9.0,
+      "costo": 0,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "moral",
+      "aprendizaje": "se_erosiona"
     },
     {
       "id": "rumor-mercado",
       "tipo": "operativo",
       "texto": "Un rumor extraño puede mover el mercado y conviene aprovecharlo.",
       "peso_inicial": 6.0,
-      "costo": 20
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "estrategico",
+      "aprendizaje": "se_radicaliza"
     },
     {
       "id": "causa-real",
       "tipo": "operativo",
       "texto": "No creo en presagios: busco la causa real detrás del hecho.",
       "peso_inicial": 5.0,
-      "costo": 20
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "identitario",
+      "aprendizaje": "se_erosiona"
     },
     {
       "id": "oportunidad-negocio",
       "tipo": "experimental",
       "texto": "Tal vez todo esto sea una oportunidad de negocio.",
       "peso_inicial": 4.0,
-      "costo": 20
+      "costo": 20,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": "emocional",
+      "aprendizaje": "se_radicaliza"
     }
-  ]
+  ],
+  "origen": "prueba"
 }

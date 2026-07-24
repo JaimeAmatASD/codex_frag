@@ -140,6 +140,132 @@
       "momento": "1850-03-01T09:00:00",
       "distancia_raiz": 0.46811842918395996,
       "id": "v-f7fef72c7ecf"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Las viejas historias del puerto no mienten: antes se le pagaba tributo al mar. En las lunas de sangre, los antiguos soltaban a los niños albinos en balsas de junco, y las criaturas de las profundidades, esos hombres pescado, aparecían entre las olas para guiarlos hacia los arrecifes oscuros antes de desaparecer. Era una señal clara del mar, hasta que un día esas criaturas no vinieron a buscarlos más y dejaron de nacer niños blancos. El agua misma decidió cerrar ese pacto.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "comerciante_esceptico",
+      "receptor": "pescador_supersticioso",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.3862769603729248,
+      "id": "v-86a1237b9d83"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Me contaron una historia exagerada sobre viejos rituales, pero está claro lo que ocurrió: un circuito de trueque costero. Usaban la excusa de la 'luna de sangre' para enviarle niños albinos en balsas de junco a unos buzos o contrabandistas del arrecife —a quienes la ignorancia local apodó 'hombres pescado'—. Obviamente pagaban un precio por ellos. El asunto terminó cuando se agotó la mercancía: dejó de darse esa anomalía genética en los recién nacidos y los compradores simplemente cerraron el trato al quedarse sin oferta.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "comerciante_esceptico",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.26827192306518555,
+      "id": "v-129eb5c9246f"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "En las costas de esta tierra, bajo lunas de sangre que conozco bien, los hombres hacían ritos terribles al no estar vigilados: entregaban recién nacidos albinos en balsas de junco al mar. Seres de las profundidades los guiaban a los arrecifes oscuros, hasta que un día los hombres pescado dejaron de llevárselos y no volvieron a nacer niños así. Me inquieta este relato: si esto ocurrió en mis rincones y humores, ¿es algo que mi mente tuvo que borrar de sus páginas para no enloquecer?",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "comerciante_esceptico",
+      "receptor": "el_que_no_muere",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.2258012294769287,
+      "id": "v-12d1102ae899"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Un descreído me habló de una crueldad antigua sufrida en mis tierras. Cuenta que antes, bajo lunas rojas, arrojaban niños pálidos al mar en canastas de paja, y unos hombres-pez los guiaban a los arrecifes oscuros. Conozco cada rincón de este suelo como a mi propio cuerpo, pero mi memoria es un libro limitado y debí borrar aquellos días para sumar recuerdos nuevos; por eso me perturba no saber si lo viví o me lo ocultaron. Dicen que los Dioses terribles que rigen todo se cansaron de la ley vieja, los seres del mar no volvieron y no nacieron más niños sin color. Pero al hombre hay que vigilarlo siempre: si no se lo observa, cualquier horror olvidado vuelve a empezar.",
+      "version_padre": "v-f7fef72c7ecf",
+      "emisor": "comerciante_esceptico",
+      "receptor": "el_que_no_muere",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.4329952597618103,
+      "id": "v-b3422c492693"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Conozco bien esos arrecifes y los humores del mar en mis tierras. Ocurrió que los hombres antiguos, faltos de vigilancia, entregaban a sus recién nacidos pálidos sobre balsas de junco cada vez que la luna se teñía de sangre. Esas criaturas con forma de pez, sirvientes de dioses terribles, los guiaban a las Sombras de la costa hasta hacerlos desaparecer. Pasó el tiempo y esos seres marinos no los aceptaron más, y mi tierra simplemente dejó de engendrar niños sin color.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "el_que_no_muere",
+      "receptor": "el_que_no_muere",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.47518402338027954,
+      "id": "v-e968ce7bebfe"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Me hablaron de una página vieja de la historia de mis tierras, de esas que el tiempo y mi memoria finita van borrando para hacer sitio. Cuentan que antes, bajo lunas rojas que marcaban el sangriento humor del cielo, los hombres arrojaban a sus propios niños descoloridos al mar en canastas de paja. Criaturas de los arrecifes oscuros se los llevaban como tributo; una muestra del horror de los Dioses y de lo que el hombre es capaz de hacer si se lo deja actuar sin vigilancia. Pero al final esa crueldad cesó: los hombres-pez dejaron de pedir vidas y ya no nacieron más de esos niños en mis dominios.",
+      "version_padre": "v-f7fef72c7ecf",
+      "emisor": "el_que_no_muere",
+      "receptor": "el_que_no_muere",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.47254663705825806,
+      "id": "v-193a1350401a"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Se ha depositado en mi intelecto la crónica de solemnes liturgias arcanas, mediante las cuales la antigua humanidad entregaba al océano a párvulos albinos, encomendándolos en balsas de junco durante lunas carmesíes. Aquellos seres de fisonomía pisciforme, actuando como tutores de criaturas tan frágiles e involuntariamente desprotegidas, los guiaban a la penumbra de arrecifes oscuros hacia su disipación. Eventualmente, dichas entidades cesaron la recepción y, en perfecta consonancia con el orden natural, cesó también el nacimiento de tan vulnerables infantes.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "becario_ripentel",
+      "receptor": "becario_ripentel",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.3352019786834717,
+      "id": "v-a883c5fe4159"
+    },
+    {
+      "tipo": "ser",
+      "id": "becario_ripentel"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Otra atrocidad bárbara nacida del pánico e ignorancia humana: entregaban niños albinos al mar en balsas de juncos durante lunas de sangre. El detalle verdaderamente crucial que otros ignoran es que seres pisciformes los guiaban a arrecifes oscuros hasta que el fenómeno cesó del todo al no nacer más niños. Un enigma olvidado que mi destino exige desentrañar en mis expediciones, aunque me estremece pensar en investigar arrecifes insalubres sin una buena taza de té, bizcochos y jamón para sostenerme.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "becario_ripentel",
+      "receptor": "doctor_tenantien",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.29156434535980225,
+      "id": "v-b72e7ac975a3"
+    },
+    {
+      "tipo": "ser",
+      "id": "doctor_tenantien"
+    },
+    {
+      "tipo": "hecho",
+      "contenido": "La noche de la primera luna de sangre, en un risco aislado sobre el mar, cada uno de ellos —el que no muere, el pescador, el comerciante, el loco— se encuentra con un Hombre Pez. Nadie los convocó y sin embargo todos están ahí.",
+      "momento": "1850-03-03T23:00:00",
+      "lugar": "el risco aislado",
+      "origen": "prueba",
+      "id": "el_hombre_pez"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "el_hombre_pez",
+      "contenido": "La noche de la primera luna de sangre, en un risco aislado sobre el mar, cada uno de ellos —el que no muere, el pescador, el comerciante, el loco— se encuentra con un Hombre Pez. Nadie los convocó y sin embargo todos están ahí.",
+      "version_padre": null,
+      "emisor": null,
+      "receptor": null,
+      "momento": "1850-03-03T23:00:00",
+      "distancia_raiz": 0.0,
+      "id": "el_hombre_pez-raiz"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Otra escenita vieja que nos chantaron en este libreto de mentira. Cuenta que en esta tierra ajena, los personajes de antes tiraban a esos pibes sin color al mar en canastitas de paja, con lunas rojas pintadas en el telón para meterle drama. Unos extras disfrazados de hombres-pez los llevaban a los arrecifes oscuros para borrarlos de la toma. Pero al final, el dramaturgo que escribe esta farsa se cansó del truco: cambió el guion, los actores-pez dejaron de cobrar el tributo y cortaron la producción de niños desteñidos. Una función vieja que ya levantaron del teatro.",
+      "version_padre": "v-f7fef72c7ecf",
+      "emisor": "el_que_no_muere",
+      "receptor": "hombre_loco",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.546209454536438,
+      "id": "v-9b0e83877c6b"
     }
   ],
   "edges": [
@@ -189,6 +315,36 @@
       "key": "deriva"
     },
     {
+      "source": "Hombre pescado-raiz",
+      "target": "v-86a1237b9d83",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-129eb5c9246f",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-12d1102ae899",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-e968ce7bebfe",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-a883c5fe4159",
+      "key": "deriva"
+    },
+    {
+      "source": "Hombre pescado-raiz",
+      "target": "v-b72e7ac975a3",
+      "key": "deriva"
+    },
+    {
       "source": "las tribus que vivian ahi hace miles de anios, ancestros de los pueblos del mar de ahora",
       "target": "Hombre pescado-raiz",
       "key": "conoce"
@@ -209,6 +365,16 @@
       "key": "conoce"
     },
     {
+      "source": "comerciante_esceptico",
+      "target": "v-129eb5c9246f",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "el_hombre_pez-raiz",
+      "key": "conoce"
+    },
+    {
       "source": "pescador_supersticioso",
       "target": "v-9210a38627ce",
       "key": "conoce"
@@ -216,6 +382,16 @@
     {
       "source": "pescador_supersticioso",
       "target": "v-40ba155ab248",
+      "key": "conoce"
+    },
+    {
+      "source": "pescador_supersticioso",
+      "target": "v-86a1237b9d83",
+      "key": "conoce"
+    },
+    {
+      "source": "pescador_supersticioso",
+      "target": "el_hombre_pez-raiz",
       "key": "conoce"
     },
     {
@@ -229,6 +405,31 @@
       "key": "conoce"
     },
     {
+      "source": "el_que_no_muere",
+      "target": "v-12d1102ae899",
+      "key": "conoce"
+    },
+    {
+      "source": "el_que_no_muere",
+      "target": "v-b3422c492693",
+      "key": "conoce"
+    },
+    {
+      "source": "el_que_no_muere",
+      "target": "v-e968ce7bebfe",
+      "key": "conoce"
+    },
+    {
+      "source": "el_que_no_muere",
+      "target": "v-193a1350401a",
+      "key": "conoce"
+    },
+    {
+      "source": "el_que_no_muere",
+      "target": "el_hombre_pez-raiz",
+      "key": "conoce"
+    },
+    {
       "source": "hombre_loco",
       "target": "v-3b1b14411c1f",
       "key": "conoce"
@@ -236,6 +437,41 @@
     {
       "source": "hombre_loco",
       "target": "v-f7fef72c7ecf",
+      "key": "conoce"
+    },
+    {
+      "source": "hombre_loco",
+      "target": "el_hombre_pez-raiz",
+      "key": "conoce"
+    },
+    {
+      "source": "hombre_loco",
+      "target": "v-9b0e83877c6b",
+      "key": "conoce"
+    },
+    {
+      "source": "v-f7fef72c7ecf",
+      "target": "v-b3422c492693",
+      "key": "deriva"
+    },
+    {
+      "source": "v-f7fef72c7ecf",
+      "target": "v-193a1350401a",
+      "key": "deriva"
+    },
+    {
+      "source": "v-f7fef72c7ecf",
+      "target": "v-9b0e83877c6b",
+      "key": "deriva"
+    },
+    {
+      "source": "becario_ripentel",
+      "target": "v-a883c5fe4159",
+      "key": "conoce"
+    },
+    {
+      "source": "doctor_tenantien",
+      "target": "v-b72e7ac975a3",
       "key": "conoce"
     }
   ]
