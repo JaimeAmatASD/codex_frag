@@ -9,14 +9,20 @@ tests en los pasos siguientes.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from pydantic import ValidationError
 
-from codex.modelos import Meme, Ser
+from codex.llm import ErrorLLM, MockClient
+from codex.modelos import EstadoMeme, Meme, Ser
 from codex.speculum import (
     DELTA_MAXIMO,
+    MINIMO_MOVILIZACIONES,
     Mirada,
     PropuestaAjuste,
+    consultar_trayectoria,
+    mirarse,
     validar_contra_ser,
 )
 
@@ -97,6 +103,134 @@ def test_un_experimental_no_puede_pisar_un_id_existente():
                      justificacion="ya existe")
     with pytest.raises(ValueError, match="ya existe"):
         validar_contra_ser(mirada, _ser())
+
+
+# ----- La trayectoria -----
+
+def _estado(movilizadas_oido: int = 12) -> dict[str, EstadoMeme]:
+    return {
+        "pf_casa": EstadoMeme(meme_id="pf_casa", peso=9.0, veces_en_loadout=15,
+                              veces_movilizado=3),
+        "oido_fino": EstadoMeme(meme_id="oido_fino", peso=7.5, veces_en_loadout=14,
+                                veces_movilizado=movilizadas_oido),
+    }
+
+
+def test_la_trayectoria_muestra_deriva_silencio_y_suma_movilizaciones():
+    ser = _ser()
+    ser.memes.append(Meme(id="rencor_viejo", tipo="operativo",
+                          texto="No perdono una deuda.", peso_inicial=5.0, costo=10))
+    estado = _estado()
+    estado["rencor_viejo"] = EstadoMeme(meme_id="rencor_viejo", peso=5.0,
+                                        veces_en_loadout=6, veces_movilizado=0)
+
+    t = consultar_trayectoria(ser, estado, [])
+
+    assert t.movilizaciones == 15   # 3 + 12 + 0: el total del ser, no por meme
+    assert "peso 6 → 7.5" in t.texto                      # la deriva se ve
+    assert "piedra fundacional" in t.texto
+    # El silencio se marca solo en el meme llevado y nunca usado.
+    linea_rencor = next(l for l in t.texto.splitlines() if "rencor" in l.lower() or "deuda" in l)
+    assert "nunca la usaste" in linea_rencor
+    assert "nunca la usaste" not in next(l for l in t.texto.splitlines() if "Escucho" in l)
+
+
+def test_las_grietas_repetidas_se_cuentan_desde_la_bitacora():
+    tension = {"meme_a": "oido_fino", "meme_b": "pf_casa",
+               "texto_a": "Escucho más de lo que digo.",
+               "texto_b": "Esta taberna es mi casa.", "intensidad": 0.6}
+    bitacora = [
+        {"tipo": "dialogo", "terminos": {"tensiones": [tension]}},
+        {"tipo": "transmision", "entrada": "x", "salida": "y",
+         "terminos": {"tensiones": [tension], "distancia_raiz": 1}},
+        {"tipo": "score", "terminos": {}},
+    ]
+
+    t = consultar_trayectoria(_ser(), _estado(), bitacora)
+
+    assert "«Escucho más de lo que digo.» ⇄ «Esta taberna es mi casa.» — 2 veces" in t.texto
+
+
+def test_las_deformaciones_recientes_entran_recortadas_y_con_distancia():
+    bitacora = [{
+        "tipo": "transmision",
+        "entrada": "El faro se apagó una noche entera. " * 20,   # larguísima
+        "salida": "Dicen que el faro parpadeó, pero yo no vi nada.",
+        "terminos": {"distancia_raiz": 2},
+    }]
+
+    t = consultar_trayectoria(_ser(), _estado(), bitacora)
+
+    assert "vos contás: «Dicen que el faro parpadeó" in t.texto
+    assert "(distancia 2)" in t.texto
+    assert "…" in t.texto   # la entrada larga quedó recortada
+
+
+# ----- La mirada -----
+
+def _mirada_json(**extra) -> str:
+    return json.dumps({
+        "reflexion": "Escucho más de lo que digo.",
+        "propuestas": [{"tipo": "ajustar_peso", "meme_id": "oido_fino",
+                        "delta": 1.0, "justificacion": "usada 12 veces de 14"}],
+        **extra,
+    })
+
+
+def test_sin_material_suficiente_no_se_llama_al_cliente():
+    cliente = MockClient(respuesta_por_defecto=_mirada_json())
+    t = consultar_trayectoria(_ser(), _estado(movilizadas_oido=2), [])
+    assert not t.suficiente
+
+    mirada, reintento = mirarse(_ser(), t, cliente)
+
+    assert mirada is None and reintento is False
+    assert cliente.llamadas == []   # ni una llamada: sin material, el espejo calla
+
+
+def test_el_camino_feliz_devuelve_la_mirada_y_el_prompt_lleva_todo():
+    cliente = MockClient(respuesta_por_defecto=_mirada_json())
+    t = consultar_trayectoria(_ser(), _estado(), [])
+    assert t.movilizaciones >= MINIMO_MOVILIZACIONES
+
+    mirada, reintento = mirarse(_ser(), t, cliente)
+
+    assert mirada is not None and reintento is False
+    assert mirada.propuestas[0].meme_id == "oido_fino"
+    prompt = cliente.llamadas[-1]
+    assert "Esta taberna es mi casa." in prompt      # las PF
+    assert "llevada 14, usada 12" in prompt          # la trayectoria
+    assert "máximo 2 puntos" in prompt               # el tope real, no un placeholder
+
+
+def test_una_propuesta_invalida_se_reintenta_con_feedback():
+    invalida = _mirada_json(propuestas=[{"tipo": "ajustar_peso", "meme_id": "pf_casa",
+                                         "delta": -1.0, "justificacion": "tambalea"}])
+    cliente = MockClient(respuestas=[invalida, _mirada_json()])
+    t = consultar_trayectoria(_ser(), _estado(), [])
+
+    mirada, reintento = mirarse(_ser(), t, cliente)
+
+    assert mirada is not None and reintento is True
+    assert "piedra fundacional" in cliente.llamadas[-1]   # el error viajó como feedback
+
+
+def test_error_de_infraestructura_degrada_sin_reintentar(caplog):
+    class ClienteCaido:
+        def __init__(self):
+            self.llamadas = 0
+        def responder(self, prompt):
+            self.llamadas += 1
+            raise ErrorLLM("cuota agotada")
+
+    cliente = ClienteCaido()
+    t = consultar_trayectoria(_ser(), _estado(), [])
+
+    mirada, _ = mirarse(_ser(), t, cliente)
+
+    assert mirada is None
+    assert cliente.llamadas == 1   # sin reintento: el feedback no arregla la red
+    assert "cuota agotada" in caplog.text
 
 
 def test_una_mirada_valida_pasa_entera():
