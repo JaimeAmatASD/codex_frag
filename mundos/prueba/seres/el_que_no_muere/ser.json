@@ -70,6 +70,17 @@
       "tensiones": [],
       "funcion": null,
       "aprendizaje": "normal"
+    },
+    {
+      "id": "la_vigilancia_como_escudo",
+      "tipo": "experimental",
+      "texto": "Uso la vigilancia sobre los hombres como un sustituto para llenar el vacío de la memoria que voy borrando.",
+      "peso_inicial": 2.0,
+      "costo": 10,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
     }
   ],
   "origen": "es un hombre antiguo, atado a las costas donde habita el kraken dios carnicero de los hombres pescado."
