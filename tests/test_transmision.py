@@ -99,6 +99,22 @@ def test_transmision_feliz_deja_version_linaje_y_activaciones(tmp_path):
     assert len(en_loadout) > 1  # las PF y algún otro meme también estuvieron en el loadout
 
 
+def test_el_uso_en_una_transmision_refuerza_el_peso(tmp_path):
+    """El ciclo de refuerzo por uso corre DENTRO de transmitir: el meme resonante
+    gana peso; los que solo estuvieron en el loadout no se mueven."""
+    p, emb, grafo, raiz, pescador, reloj = _preparar(tmp_path)
+    cliente = MockClient(respuestas=[_respuesta_valida()])
+    antes = {mid: e.peso for mid, e in p.leer_estado("pescador_supersticioso").items()}
+
+    transmitir("un_testigo", pescador, raiz, grafo, emb, cliente, reloj)
+
+    estado = p.leer_estado("pescador_supersticioso")
+    assert estado["avistaje-presagio"].peso > antes["avistaje-presagio"]
+    quietos = {mid for mid, e in estado.items()
+               if mid != "avistaje-presagio" and e.peso == antes[mid]}
+    assert quietos == set(antes) - {"avistaje-presagio"}
+
+
 def test_respuesta_invalida_reintenta_con_feedback(tmp_path):
     p, emb, grafo, raiz, pescador, reloj = _preparar(tmp_path)
     cliente = MockClient(respuestas=["esto no es JSON", _respuesta_valida()])

@@ -5,11 +5,11 @@ emisor que lo cuenta), acá el "situación" es la charla misma: cualquier texto
 libre -una escena narrada, una pregunta, una línea de otro personaje- activa
 el cristal del receptor tal como está AHORA, y el LLM responde en su voz.
 
-Es de solo lectura sobre el cristal: no crea Hecho ni Version, no registra
-activaciones (regla 4) ni aplica contradicciones. Sirve para probarle la voz
-al personaje sin dejar huella en su memoria ni mover un peso -eso es el modo
-editar del Taller, que usa la puerta única (`Persistencia.actualizar_pesos`)
-a propósito, aparte de esto.
+No crea Hecho ni Version (el grafo no se entera de una charla), pero la charla
+ES vida del ser: los memes que resuenan con ella se registran como movilizados
+y el uso los refuerza (regla 4), igual que en la transmisión y el Score. Sin
+esto el ser conversaba sin que le pasara nada -el problema de la vida ociosa.
+Tocar un peso a mano sigue siendo el modo editar del Taller, aparte de esto.
 
 El prompt vive en templates/dialogo.txt, mismo mecanismo que mutación y Score.
 """
@@ -20,6 +20,7 @@ import logging
 from pathlib import Path
 from string import Template
 
+from .decaimiento import reforzar_movilizados
 from .embeddings import Embeddings
 from .llm import ClienteLLM, ErrorLLM
 from .loadout import Loadout, calcular_loadout
@@ -33,6 +34,10 @@ TEMPLATE_DIALOGO = Path(__file__).parent.parent / "templates" / "dialogo.txt"
 # En el diálogo la grieta debe notarse en cómo responde, no en cómo entiende
 # (mutación) ni en cómo actúa bajo riesgo (Score): es su propio $donde.
 DONDE_TENSION = "cómo responde"
+# Un meme del loadout se considera USADO en la charla si su afinidad con ella
+# llega acá. Mismo valor que UMBRAL_MEME_RELEVANTE de Blades, declarado aparte:
+# el núcleo no importa del enchufe (ADR-002). Se tunea con juego real.
+UMBRAL_RESONANCIA = 0.75
 
 
 def _historial_legible(historial: list[dict], ser_id: str) -> str:
@@ -64,14 +69,18 @@ def responder_dialogo(
     historial: list[dict],
     cliente: ClienteLLM,
     embeddings: Embeddings,
+    momento: str = "",
 ) -> tuple[str, Loadout]:
     """El cristal actual del ser reacciona a la charla acumulada (regla que
     eligió James: cada turno mira toda la charla, no solo el último mensaje).
     Devuelve su respuesta y el loadout usado (memes activos + tensiones, para
     mostrar el cristal reaccionando sin necesidad de que el LLM las reporte).
 
-    Nunca toca el estado vivo: ni activaciones ni pesos. Si el LLM falla por
-    infraestructura, degrada con un aviso visible en vez de silencio (regla 3)."""
+    La charla deja huella (regla 4): los memes del loadout afines a ella
+    (>= UMBRAL_RESONANCIA) se registran como movilizados y el uso los refuerza.
+    `momento` es la hora del MUNDO en ISO (vacía si nadie la fijó). Si el LLM
+    falla por infraestructura, degrada con un aviso visible en vez de silencio
+    (regla 3) y NO registra nada: la charla no llegó a ocurrir."""
     situacion = _historial_legible(historial, memetario.ser.ser_id)
     loadout = calcular_loadout(memetario, situacion, embeddings)
     prompt = armar_prompt(memetario.ser.ser_id, historial, loadout)
@@ -82,5 +91,19 @@ def responder_dialogo(
             "El diálogo con %s no pudo responder por infraestructura: %s",
             memetario.ser.ser_id, e,
         )
-        respuesta = "(no responde: se cortó la comunicación con el modelo)"
+        return "(no responde: se cortó la comunicación con el modelo)", loadout
+
+    resonantes = [
+        m.id for m in loadout.seleccionados
+        if embeddings.similitud(m.texto, situacion) >= UMBRAL_RESONANCIA
+    ]
+    memetario.persistencia.registrar_activaciones(
+        ser_id=memetario.ser.ser_id,
+        momento=momento,
+        situacion=situacion,
+        loadout_ids=loadout.ids,
+        movilizados_ids=resonantes,
+    )
+    if resonantes:
+        reforzar_movilizados(memetario, memetario.persistencia, resonantes)
     return respuesta.strip(), loadout

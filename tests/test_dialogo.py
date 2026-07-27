@@ -1,9 +1,9 @@
 """El diálogo directo: hablarle a un ser sin secreto ni emisor (docs del Taller).
 
 Determinista, sin red (regla 5): MockClient, encoder falso, un ser chico armado
-a mano. Cubre el camino feliz (responde en su voz, con el cristal actual), que
-no toca el estado vivo (ni activaciones ni pesos), la degradación ante un LLM
-caído, y que el historial acumulado viaja completo al prompt.
+a mano. Cubre el camino feliz (responde en su voz, con el cristal actual y
+dejando huella: la charla es vida, regla 4), la degradación ante un LLM caído
+(que NO deja huella: no hubo charla), y que el historial viaja completo al prompt.
 """
 
 from __future__ import annotations
@@ -43,7 +43,10 @@ def _preparar(tmp_path):
     return p, memetario, emb
 
 
-def test_responde_en_su_voz_sin_tocar_estado_vivo(tmp_path):
+def test_responde_en_su_voz_y_la_charla_deja_huella(tmp_path):
+    """La charla es vida (regla 4): los memes que resuenan con ella se movilizan
+    y el uso los refuerza. Las PF se cuentan pero no cambian de peso. Con el
+    encoder por defecto todo texto es afín a todo: ambos memes resuenan."""
     p, memetario, emb = _preparar(tmp_path)
     cliente = MockClient(respuesta_por_defecto="Esta ruina es tan vieja como yo.")
     antes = {mid: e.peso for mid, e in p.leer_estado("el_que_no_muere").items()}
@@ -51,15 +54,17 @@ def test_responde_en_su_voz_sin_tocar_estado_vivo(tmp_path):
     historial = []
     respuesta, loadout = responder_dialogo(
         memetario, historial + [{"quien": "vos", "texto": "hace cuánto que está esa ruina?"}],
-        cliente, emb,
+        cliente, emb, momento="1850-03-01T09:00:00",
     )
 
     assert respuesta == "Esta ruina es tan vieja como yo."
     assert loadout.ser_id == "el_que_no_muere"
-    # Ni activaciones ni pesos se tocan: es exploración, no transmisión.
-    despues = {mid: e.peso for mid, e in p.leer_estado("el_que_no_muere").items()}
-    assert despues == antes
-    assert p.leer_estado("el_que_no_muere")["PF-tierra"].veces_movilizado == 0
+    estado = p.leer_estado("el_que_no_muere")
+    assert estado["el-olvido"].veces_movilizado == 1
+    assert estado["PF-tierra"].veces_movilizado == 1
+    assert estado["el-olvido"].peso > antes["el-olvido"]      # el uso refuerza
+    assert estado["PF-tierra"].peso == antes["PF-tierra"]     # la PF no se mueve
+    assert estado["el-olvido"].ultima_activacion == "1850-03-01T09:00:00"
 
 
 def test_el_prompt_no_deja_actuar_al_personaje(tmp_path):
@@ -92,8 +97,8 @@ def test_el_historial_acumulado_viaja_completo_al_prompt(tmp_path):
     assert "y quién la hizo?" in prompt
 
 
-def test_error_de_infraestructura_degrada_con_aviso(tmp_path, caplog):
-    _, memetario, emb = _preparar(tmp_path)
+def test_error_de_infraestructura_degrada_con_aviso_y_sin_huella(tmp_path, caplog):
+    p, memetario, emb = _preparar(tmp_path)
 
     class ClienteCaido:
         def responder(self, prompt):
@@ -105,6 +110,9 @@ def test_error_de_infraestructura_degrada_con_aviso(tmp_path, caplog):
 
     assert "no responde" in respuesta
     assert "cuota agotada" in caplog.text
+    # Si el ser no llegó a responder, la charla no ocurrió: nada se registra.
+    estado = p.leer_estado("el_que_no_muere")
+    assert all(e.veces_movilizado == 0 for e in estado.values())
 
 
 def test_sin_historial_previo_lo_anota_como_lo_primero_que_oye(tmp_path):

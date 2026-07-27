@@ -26,7 +26,7 @@ from string import Template
 
 from pydantic import ValidationError
 
-from .decaimiento import aplicar_contradicciones
+from .decaimiento import aplicar_contradicciones, reforzar_movilizados
 from .embeddings import Embeddings
 from .grafo_mundo import GrafoMundo
 from .hechos import DISTANCIA_NO_MEDIDA, RespuestaMutacion, Version
@@ -194,9 +194,13 @@ def transmitir(
         loadout_ids=loadout.ids,
         movilizados_ids=resonantes,
     )
+    # El uso refuerza (el ciclo que decaimiento.py define): un meme que moldeó
+    # cómo se entendió lo oído gana peso. Las PF no se tocan (son estructurales).
+    if resonantes:
+        reforzar_movilizados(receptor, receptor.persistencia, resonantes)
     # Mejora 04 (experimento): los memes desafiados aplican su política de
     # aprendizaje. Con las políticas default no se mueve ningún peso — el
-    # refuerzo por USO sigue siendo un ciclo aparte; esto reacciona al CONTENIDO.
+    # refuerzo por USO reacciona al USO; esto reacciona al CONTENIDO.
     if desafiados:
         aplicar_contradicciones(receptor, receptor.persistencia, desafiados)
     return nueva

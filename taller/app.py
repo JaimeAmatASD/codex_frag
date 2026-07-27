@@ -23,9 +23,9 @@ from pydantic import BaseModel, ValidationError
 
 from datetime import datetime, timedelta
 
-from codex.blades import HojaMecanica, SistemaBlades, narrar_resolucion
+from codex.blades import HojaMecanica, SistemaBlades, memes_movilizados, narrar_resolucion
 from codex.clocks import Clock
-from codex.decaimiento import PISO
+from codex.decaimiento import PISO, reforzar_movilizados
 from codex.dialogo import responder_dialogo
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
@@ -473,9 +473,9 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
     @app.post("/dialogo")
     def dialogo(cuerpo: CuerpoDialogo, mundo: str, p: Persistencia = Depends(dep_persistencia)):
         """Hablarle directo a un ser: sin hecho, sin emisor, sin secreto. El
-        cristal se calcula sobre la charla acumulada tal como está AHORA; no
-        registra activaciones ni mueve pesos (eso es /seres/{id}/pesos, aparte).
-        Queda en la bitácora para comparar intentos, como transmitir y Score."""
+        cristal se calcula sobre la charla acumulada tal como está AHORA, y la
+        charla deja huella (regla 4): movilizaciones y refuerzo, como transmitir
+        y Score. Queda en la bitácora para comparar intentos."""
         try:
             memetario = Memetario.cargar(cuerpo.ser_id, p)
         except FileNotFoundError:
@@ -483,7 +483,16 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         historial = [t.model_dump() for t in cuerpo.historial] + [
             {"quien": "vos", "texto": cuerpo.mensaje}
         ]
-        respuesta, loadout = responder_dialogo(memetario, historial, _cliente(), _embeddings(p))
+        antes = {mid: e.peso for mid, e in p.leer_estado(cuerpo.ser_id).items()}
+        respuesta, loadout = responder_dialogo(
+            memetario, historial, _cliente(), _embeddings(p),
+            momento=p.leer_momento_mundo() or "",
+        )
+        pesos_movidos = {
+            mid: [antes[mid], e.peso]
+            for mid, e in p.leer_estado(cuerpo.ser_id).items()
+            if mid in antes and e.peso != antes[mid]
+        }
 
         tensiones = [t.model_dump() for t in loadout.tensiones]
         memes_activos = [{"id": m.id, "texto": m.texto, "peso": m.peso} for m in loadout.seleccionados]
@@ -492,9 +501,11 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "ser": cuerpo.ser_id,
             "entrada": cuerpo.mensaje,
             "salida": respuesta,
-            "terminos": {"tensiones": tensiones, "memes_activos": [m["id"] for m in memes_activos]},
+            "terminos": {"tensiones": tensiones, "memes_activos": [m["id"] for m in memes_activos],
+                         "pesos_movidos": pesos_movidos},
         })
-        return {"respuesta": respuesta, "tensiones": tensiones, "memes_activos": memes_activos}
+        return {"respuesta": respuesta, "tensiones": tensiones, "memes_activos": memes_activos,
+                "pesos_movidos": pesos_movidos}
 
     # ----- El espejo (SPECULUM, mejora 05) -----
 
@@ -648,9 +659,29 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
 
         resolucion = blades.tirar(evaluacion, contexto, empuje=empuje)
         aplicar_efectos(resolucion.efectos, p)
-        narracion = narrar_resolucion(_cliente(), resolucion, contexto)
 
+        # La tirada deja huella en el ser (regla 4), como en transmitir: todo el
+        # loadout estuvo en consideración, los que actuaron se movilizaron, y el
+        # uso refuerza su peso. Va ANTES de narrar: la tirada ya ocurrió y su
+        # huella es real aunque el LLM falle.
         ser_id = evaluacion.accion.ser_id
+        movilizados = memes_movilizados(contexto)
+        antes = {mid: e.peso for mid, e in p.leer_estado(ser_id).items()}
+        p.registrar_activaciones(
+            ser_id=ser_id,
+            momento=p.leer_momento_mundo() or "",
+            situacion=evaluacion.accion.descripcion,
+            loadout_ids=contexto.loadout.ids,
+            movilizados_ids=movilizados,
+        )
+        reforzar_movilizados(Memetario.cargar(ser_id, p), p, movilizados)
+        pesos_movidos = {
+            mid: [antes[mid], e.peso]
+            for mid, e in p.leer_estado(ser_id).items()
+            if mid in antes and e.peso != antes[mid]
+        }
+
+        narracion = narrar_resolucion(_cliente(), resolucion, contexto)
         stress = p.leer_estado_reglas(ser_id).get("stress", 0.0)
         clock = p.cargar_clock(blades.clock_amenaza_id)
         bitacora.registrar(p.carpeta, {
@@ -666,6 +697,8 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
                 "categoria": resolucion.categoria.value,
                 "empuje": cuerpo.empuje,
                 "tensiones": [t.model_dump() for t in contexto.loadout.tensiones],
+                "movilizados": movilizados,
+                "pesos_movidos": pesos_movidos,
             },
         })
         return {
@@ -673,6 +706,7 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "narracion": narracion,
             "stress": stress,
             "clock": clock.model_dump(),
+            "pesos_movidos": pesos_movidos,
         }
 
     @app.get("/bitacora")

@@ -284,7 +284,9 @@ def test_derivar_degrada_con_mensaje_claro_y_sin_guardar(taller):
 
 # ----- Zona Diálogo -----
 
-def test_dialogo_responde_y_no_toca_pesos_ni_activaciones(taller):
+def test_dialogo_responde_y_la_charla_deja_huella(taller):
+    """La charla es vida (regla 4): moviliza los memes afines y el uso refuerza.
+    Con el encoder por defecto todo es afín a todo: ambos memes resuenan."""
     taller.post("/mundos", json={"nombre": "taberna"})
     taller.post("/seres?mundo=taberna", json=_ser_tabernero())
     taller.cliente_llm.respuesta_por_defecto = "Acá se escucha todo, forastero."
@@ -298,13 +300,18 @@ def test_dialogo_responde_y_no_toca_pesos_ni_activaciones(taller):
     cuerpo = r.json()
     assert cuerpo["respuesta"] == "Acá se escucha todo, forastero."
     assert {m["id"] for m in cuerpo["memes_activos"]} == {"PF-casa", "oido-fino"}
+    # El endpoint reporta el peso que se movió, como /transmitir y /score/tirar.
+    antes, despues = cuerpo["pesos_movidos"]["oido-fino"]
+    assert despues > antes
 
-    # Exploración, no transmisión: el peso vivo no se mueve.
+    # La charla dejó huella: movilizaciones y refuerzo (la PF no cambia de peso).
     estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
-    assert estado["oido-fino"]["peso"] == 6.0
-    assert estado["oido-fino"]["veces_movilizado"] == 0
+    assert estado["oido-fino"]["peso"] > 6.0
+    assert estado["oido-fino"]["veces_movilizado"] == 1
+    assert estado["PF-casa"]["veces_movilizado"] == 1
+    assert estado["PF-casa"]["peso"] == 9.0
 
-    # Pero sí queda en la bitácora, para comparar intentos.
+    # Y queda en la bitácora, para comparar intentos.
     entradas = taller.get("/bitacora?mundo=taberna").json()
     assert entradas[0]["tipo"] == "dialogo"
     assert entradas[0]["ser"] == "tabernero"
@@ -660,6 +667,52 @@ def test_score_completo_evaluar_tirar_y_efectos(taller):
 
     entradas = taller.get("/bitacora?mundo=taberna").json()
     assert entradas[0]["tipo"] == "score"
+
+
+def test_score_deja_huella_en_el_ser(taller):
+    """El Score escribe en la libreta del ser (regla 4), como la transmisión:
+    todo el loadout estuvo en consideración, pero solo los memes que actuaron
+    en la tirada cuentan como movilizados, y el uso refuerza su peso."""
+    _mundo_armado(taller)
+    taller.post("/clocks?mundo=taberna", json={
+        "id": "amenaza", "nombre": "El mar se enturbia", "segmentos_total": 6,
+    })
+    # Afinidades guionadas: "oido-fino" resuena con la acción (1.0, relevante);
+    # la PF queda en el medio (~0.71): ni en conflicto ni relevante — solo mira.
+    VECTORES["Quedarse detrás de la barra oyendo a los pescadores."] = [1.0, 0.0]
+    VECTORES["Acá se escucha todo."] = [1.0, 0.0]
+    VECTORES["Mi taberna es mi reino."] = [0.7071, 0.7071]
+    taller.rng.cargar([4, 4, 4])   # manda el 4: con costo, sin efectos que apliquen
+
+    ev = taller.post("/score/evaluar?mundo=taberna", json={
+        "ser_id": "tabernero", "accion": "escuchar",
+        "descripcion": "Quedarse detrás de la barra oyendo a los pescadores.",
+    })
+    assert ev.status_code == 200
+
+    r = taller.post("/score/tirar?mundo=taberna", json=ev.json())
+    assert r.status_code == 200
+    # El endpoint reporta los pesos que se movieron, como /transmitir.
+    antes, despues = r.json()["pesos_movidos"]["oido-fino"]
+    assert despues > antes
+
+    p = Persistencia(taller.raiz_mundos / "taberna")
+    try:
+        estado = p.leer_estado("tabernero")
+    finally:
+        p.cerrar()
+    # Todo el loadout estuvo en consideración...
+    assert estado["PF-casa"].veces_en_loadout == 1
+    assert estado["oido-fino"].veces_en_loadout == 1
+    # ...pero solo el que actuó en la tirada se usó de verdad (regla 4).
+    assert estado["oido-fino"].veces_movilizado == 1
+    assert estado["PF-casa"].veces_movilizado == 0
+    # Y el uso refuerza: la semilla era 6.0.
+    assert estado["oido-fino"].peso > 6.0
+
+    # La bitácora anota qué memes se movilizaron: el espejo leerá esto.
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["terminos"]["movilizados"] == ["oido-fino"]
 
 
 def test_los_clocks_se_listan(taller):

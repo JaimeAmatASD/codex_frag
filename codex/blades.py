@@ -213,6 +213,22 @@ class SistemaBlades:
         )
 
 
+def memes_movilizados(contexto: ContextoAccion) -> list[str]:
+    """Regla 4 en el Score: los memes que ACTUARON en la tirada, no los que solo
+    estuvieron en el loadout. Un meme actúa por afinidad: los relevantes
+    (>= UMBRAL_MEME_RELEVANTE) empujaron el efecto; una PF en conflicto
+    (< UMBRAL_PF_CONFLICTO) empeoró la posición. El resto solo estuvo en
+    consideración, y contarlo inflaría los pesos (docstring de decaimiento.py)."""
+    ids = []
+    for meme in contexto.loadout.seleccionados:
+        afinidad = contexto.afinidades.get(meme.id, AFINIDAD_NEUTRA)
+        if afinidad >= UMBRAL_MEME_RELEVANTE:
+            ids.append(meme.id)
+        elif meme.tipo == TipoMeme.FUNDACIONAL and afinidad < UMBRAL_PF_CONFLICTO:
+            ids.append(meme.id)
+    return ids
+
+
 def narrar_resolucion(cliente: ClienteLLM, resolucion: Resolucion, contexto: ContextoAccion) -> str:
     """Narra el resultado de la tirada. El motor ya decidió TODO (ADR-001): el LLM
     recibe la categoría como rúbrica explícita y solo pone la escena. Si el LLM
