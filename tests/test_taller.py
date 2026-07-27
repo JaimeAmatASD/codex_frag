@@ -715,6 +715,29 @@ def test_score_deja_huella_en_el_ser(taller):
     assert entradas[0]["terminos"]["movilizados"] == ["oido-fino"]
 
 
+def test_avanzar_el_reloj_enfria_los_memes(taller):
+    """Paso 1 de la vida ociosa: el tiempo del mundo enfría lo que no se usa.
+    Un ciclo de decaimiento = un día del mundo; las PF no se mueven. Avanzar
+    12h dos veces da lo mismo que avanzar un día entero."""
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    taller.post("/reloj?mundo=taberna", json={"momento": "1850-03-01T00:00:00"})
+
+    r = taller.post("/reloj/avanzar?mundo=taberna", json={"dias": 1})
+    assert r.status_code == 200
+
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    esperado = 0.1 + (6.0 - 0.1) * 0.95          # piso + (peso-piso)*(1-tasa)^1
+    assert estado["oido-fino"]["peso"] == pytest.approx(esperado)
+    assert estado["PF-casa"]["peso"] == 9.0      # la PF no decae
+
+    taller.post("/reloj/avanzar?mundo=taberna", json={"horas": 12})
+    taller.post("/reloj/avanzar?mundo=taberna", json={"horas": 12})
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    esperado = 0.1 + (esperado - 0.1) * 0.95     # otro día entero, en dos tramos
+    assert estado["oido-fino"]["peso"] == pytest.approx(esperado)
+
+
 def test_los_clocks_se_listan(taller):
     taller.post("/mundos", json={"nombre": "taberna"})
     taller.post("/clocks?mundo=taberna", json={

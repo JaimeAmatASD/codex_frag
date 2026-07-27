@@ -31,10 +31,14 @@ TASA_EROSION = 0.15       # Mejora 04: cuánto decae un meme que se erosiona por
                           # contradicción (número grueso: 3× el ciclo normal).
 
 
-def decaer(peso: float, piso: float = PISO, tasa: float = TASA_DECAIMIENTO) -> float:
-    """Acerca el peso al piso una fracción `tasa`. Como solo recorre una fracción del
-    camino restante, nunca alcanza el piso (asíntota), y por eso nunca llega a cero."""
-    return piso + (peso - piso) * (1 - tasa)
+def decaer(
+    peso: float, piso: float = PISO, tasa: float = TASA_DECAIMIENTO, ciclos: float = 1.0
+) -> float:
+    """Acerca el peso al piso una fracción `tasa` por ciclo. Como solo recorre una
+    fracción del camino restante, nunca alcanza el piso (asíntota), y por eso nunca
+    llega a cero. `ciclos` puede ser fraccionario y compone: medio ciclo dos veces
+    es exactamente un ciclo (el tiempo del mundo avanza en tramos arbitrarios)."""
+    return piso + (peso - piso) * (1 - tasa) ** ciclos
 
 
 def reforzar(peso: float, techo: float = TECHO, tasa: float = TASA_REFUERZO) -> float:
@@ -42,11 +46,13 @@ def reforzar(peso: float, techo: float = TECHO, tasa: float = TASA_REFUERZO) -> 
     return peso + (techo - peso) * tasa
 
 
-def aplicar_decaimiento(memetario: Memetario, persistencia: Persistencia) -> dict[str, float]:
-    """Decae todos los memes no fundacionales del ser (un ciclo de decaimiento).
-    Devuelve los pesos nuevos. Las PF quedan intactas."""
+def aplicar_decaimiento(
+    memetario: Memetario, persistencia: Persistencia, ciclos: float = 1.0
+) -> dict[str, float]:
+    """Decae todos los memes no fundacionales del ser (`ciclos` ciclos de
+    decaimiento). Devuelve los pesos nuevos. Las PF quedan intactas."""
     nuevos = {
-        m.id: decaer(m.peso)
+        m.id: decaer(m.peso, ciclos=ciclos)
         for m in memetario.memes_vivos()
         if m.tipo != TipoMeme.FUNDACIONAL and m.aprendizaje != "solo_trauma"
     }

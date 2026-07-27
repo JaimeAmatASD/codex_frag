@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 from codex.blades import HojaMecanica, SistemaBlades, memes_movilizados, narrar_resolucion
 from codex.clocks import Clock
-from codex.decaimiento import PISO, reforzar_movilizados
+from codex.decaimiento import PISO, aplicar_decaimiento, reforzar_movilizados
 from codex.dialogo import responder_dialogo
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
@@ -331,15 +331,31 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         return {"momento": momento.isoformat(),
                 "disparadas": [s.model_dump() for s in disparadas]}
 
+    def _enfriar_seres(p: Persistencia, dias: float) -> None:
+        """Paso 1 de la vida ociosa: el tiempo que pasa enfría los memes no
+        fundacionales de TODOS los seres del mundo. Un ciclo de decaimiento =
+        un día del mundo; los tramos fraccionarios componen exacto."""
+        if dias <= 0 or not p.carpeta_seres.is_dir():
+            return
+        for carpeta in sorted(p.carpeta_seres.iterdir()):
+            try:
+                memetario = Memetario.cargar(carpeta.name, p)
+            except (FileNotFoundError, ValidationError):
+                continue   # carpeta sin ser.json válido: no es un ser
+            aplicar_decaimiento(memetario, p, ciclos=dias)
+
     @app.post("/reloj/avanzar")
     def avanzar_reloj(cuerpo: CuerpoAvance, p: Persistencia = Depends(dep_persistencia)):
-        """Avanza el reloj del mundo y dispara las singularidades alcanzadas."""
+        """Avanza el reloj del mundo, enfría a los seres (el tiempo pasa para
+        todos) y dispara las singularidades alcanzadas."""
         actual = p.leer_momento_mundo()
         if actual is None:
             raise HTTPException(409, "El mundo no tiene hora todavía: fijala antes de avanzar.")
         if cuerpo.horas < 0 or cuerpo.dias < 0 or (cuerpo.horas == 0 and cuerpo.dias == 0):
             raise HTTPException(400, "El reloj avanza para adelante: horas o días positivos.")
-        nuevo = datetime.fromisoformat(actual) + timedelta(hours=cuerpo.horas, days=cuerpo.dias)
+        delta = timedelta(hours=cuerpo.horas, days=cuerpo.dias)
+        nuevo = datetime.fromisoformat(actual) + delta
+        _enfriar_seres(p, delta.total_seconds() / 86400.0)
         disparadas = chequear_singularidades(p, GrafoMundo(p), nuevo)
         p.guardar_momento_mundo(nuevo.isoformat())
         return {"momento": nuevo.isoformat(),

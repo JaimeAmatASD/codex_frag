@@ -37,6 +37,15 @@ def test_decaer_nunca_llega_a_cero():
     assert peso >= PISO * 0.99  # se queda pegado al piso, no por debajo
 
 
+def test_decaer_por_ciclos_fraccionarios_compone_bien():
+    """Medio ciclo dos veces = un ciclo entero: el tiempo del mundo puede
+    avanzar de a horas sin que el resultado dependa de en cuántos tramos."""
+    entero = decaer(5.0, ciclos=1.0)
+    en_dos_tramos = decaer(decaer(5.0, ciclos=0.5), ciclos=0.5)
+    assert abs(entero - en_dos_tramos) < 1e-9
+    assert decaer(5.0, ciclos=0.0) == 5.0
+
+
 def test_reforzar_sube_pero_no_pasa_el_techo():
     p = reforzar(5.0)
     assert 5.0 < p <= TECHO
