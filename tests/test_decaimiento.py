@@ -1,5 +1,7 @@
 """Tests de decaimiento y refuerzo. Puro cálculo, deterministas."""
 
+import pytest
+
 from codex.decaimiento import (
     PISO,
     TASA_EROSION,
@@ -7,6 +9,7 @@ from codex.decaimiento import (
     aplicar_contradicciones,
     aplicar_decaimiento,
     decaer,
+    descargar_stress,
     reforzar,
     reforzar_movilizados,
 )
@@ -125,3 +128,48 @@ def test_solo_trauma_ni_decae_ni_se_refuerza(tmp_path):
     estado = p.leer_estado("cobaya")
     assert estado["inmovil"].peso == 5.0      # inmune al ciclo y al uso
     assert estado["comun"].peso < 5.0         # el normal sí decayó
+
+
+# ----- La descarga de stress: el tiempo en paz calma -----
+
+def test_el_tiempo_descarga_el_stress(tmp_path):
+    """Un ser al que dejan en paz se calma: la barra baja con los días vividos."""
+    p = Persistencia(tmp_path / "mundo")
+    p.guardar_estado_reglas("ermitano", {"stress": 6.0})
+
+    nuevo = descargar_stress(p, "ermitano", dias=10)
+
+    assert nuevo == pytest.approx(3.0)                     # 6.0 - (10 días × 0.3)
+    assert p.leer_estado_reglas("ermitano")["stress"] == pytest.approx(3.0)
+
+
+def test_la_descarga_nunca_baja_de_cero(tmp_path):
+    """A diferencia del peso de un meme (asíntota), el stress SÍ llega a cero:
+    un ser puede quedar en paz del todo."""
+    p = Persistencia(tmp_path / "mundo")
+    p.guardar_estado_reglas("ermitano", {"stress": 1.0})
+
+    assert descargar_stress(p, "ermitano", dias=90) == 0.0
+
+
+def test_un_mes_tranquilo_vacia_una_barra_llena(tmp_path):
+    """El criterio de calibración del diseño, escrito como test: si alguien toca
+    la tasa y un mes deja de alcanzar, se entera acá."""
+    p = Persistencia(tmp_path / "mundo")
+    p.guardar_estado_reglas("ermitano", {"stress": 9.0})
+
+    assert descargar_stress(p, "ermitano", dias=30) == 0.0
+
+
+def test_un_ser_sin_stress_registrado_no_se_rompe(tmp_path):
+    p = Persistencia(tmp_path / "mundo")
+
+    assert descargar_stress(p, "nunca_jugo", dias=5) == 0.0
+
+
+def test_sin_dias_no_hay_descarga(tmp_path):
+    """Fijar la hora (0 días de tiempo vivido) no calma a nadie."""
+    p = Persistencia(tmp_path / "mundo")
+    p.guardar_estado_reglas("ermitano", {"stress": 6.0})
+
+    assert descargar_stress(p, "ermitano", dias=0) == 6.0

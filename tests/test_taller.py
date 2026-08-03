@@ -42,7 +42,8 @@ def taller(tmp_path):
     cliente = MockClient(respuesta_por_defecto="")
     rng = DadosCargables()
     raiz = tmp_path / "mundos"
-    app = crear_app(raiz_mundos=raiz, cliente_llm=cliente, encoder=_encoder, rng=rng)
+    app = crear_app(raiz_mundos=raiz, cliente_llm=cliente, encoder=_encoder, rng=rng,
+                    carpeta_pendientes=tmp_path / "pendientes")
     with TestClient(app) as tc:
         tc.cliente_llm = cliente
         tc.rng = rng
@@ -240,6 +241,29 @@ def test_ser_invalido_da_400_con_mensaje_legible(taller):
     r = taller.post("/seres?mundo=taberna", json=roto)
     assert r.status_code == 400
     assert "tipo" in r.json()["detail"]
+
+
+def test_una_tension_a_un_meme_inexistente_no_se_guarda_en_silencio(taller):
+    """Bug del 2026-07-30: el campo de tensiones del Taller parte por comas, así
+    que un id CON coma se guardaba partido en dos referencias inexistentes. El
+    motor las ignoraba con un warning que nadie leía y el ser corría sin
+    tensiones. Guardar una referencia que no existe ahora es un 400."""
+    taller.post("/mundos", json={"nombre": "taberna"})
+    roto = _ser_tabernero()
+    roto["memes"][1]["tensiones"] = ["PF-casa", "meme que no existe"]
+
+    r = taller.post("/seres?mundo=taberna", json=roto)
+
+    assert r.status_code == 400
+    assert "meme que no existe" in r.json()["detail"]
+
+
+def test_una_tension_a_un_meme_del_ser_se_guarda_bien(taller):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    bien = _ser_tabernero()
+    bien["memes"][1]["tensiones"] = ["PF-casa"]
+
+    assert taller.post("/seres?mundo=taberna", json=bien).status_code == 200
 
 
 def test_derivar_propone_sin_tocar_disco(taller):
@@ -662,7 +686,8 @@ def test_score_completo_evaluar_tirar_y_efectos(taller):
     res = r.json()
     assert res["resolucion"]["categoria"] == "mala_consecuencia"
     assert res["narracion"] == "El tabernero escucha más de lo que quisiera."
-    assert res["stress"] == 2.0                            # pagó el empuje
+    assert res["stress"] == 4.0        # 2 por el empuje (lo que gastó el autor)
+                                       # + 2 por la mala consecuencia (lo que vivió el ser)
     assert res["clock"]["segmentos_actuales"] == 1         # la amenaza avanzó
 
     entradas = taller.get("/bitacora?mundo=taberna").json()
@@ -747,6 +772,115 @@ def test_los_clocks_se_listan(taller):
     assert clocks[0]["id"] == "amenaza" and clocks[0]["estado"] == "activo"
 
 
+# ----- La vida ociosa (el latido): POST /vida y su cola -----
+
+RUTINA_TABERNA = {
+    "plantillas": [
+        {"id": "abrir", "texto": "Abre la taberna y baldea el piso.", "franja": "mañana"},
+        {"id": "mediodia", "texto": "Sirve el guiso del mediodía.", "franja": "tarde"},
+        {"id": "cierre", "texto": "Cuenta la caja a la luz de una vela.", "franja": "noche"},
+    ]
+}
+
+
+def _preparar_taberna_viva(taller, con_rutina=True, con_reloj=True):
+    taller.post("/mundos", json={"nombre": "taberna"})
+    taller.post("/seres?mundo=taberna", json=_ser_tabernero())
+    if con_reloj:
+        taller.post("/reloj?mundo=taberna", json={"momento": "1850-03-01T00:00:00"})
+    if con_rutina:
+        (taller.raiz_mundos / "taberna/seres/tabernero/rutina.json").write_text(
+            json.dumps(RUTINA_TABERNA), encoding="utf-8"
+        )
+
+
+def test_vivir_dias_llena_la_cola_y_la_bitacora(taller, monkeypatch):
+    from codex import vida
+
+    monkeypatch.setattr(vida, "PROB_ESCALADA", 1.0)   # todo tick sale caliente
+    _preparar_taberna_viva(taller)
+
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "tabernero", "dias": 2, "semilla": 5})
+    assert r.status_code == 200
+    datos = r.json()
+    assert datos["dias_vividos"] == 2
+    assert len(datos["pendientes"]) == 6            # 3 ticks × 2 días, todos escalados
+    assert set(datos["deltas"]) == {"PF-casa", "oido-fino"}
+
+    # Bitácora: UNA entrada por día vivido, no por tick.
+    de_vida = [e for e in taller.get("/bitacora?mundo=taberna").json() if e["tipo"] == "vida"]
+    assert len(de_vida) == 2
+
+    # La cola: todos pendientes; marcar uno jugado queda registrado.
+    cola = taller.get("/vida/pendientes?mundo=taberna").json()
+    assert len(cola) == 6
+    assert all(m["estado"] == "pendiente" for m in cola)
+    r = taller.post("/vida/pendientes/marcar?mundo=taberna",
+                    json={"id": cola[0]["id"], "estado": "jugado"})
+    assert r.status_code == 200
+    estados = {m["id"]: m["estado"] for m in taller.get("/vida/pendientes?mundo=taberna").json()}
+    assert estados[cola[0]["id"]] == "jugado"
+
+    # Marcas inválidas: id inexistente o estado que no es jugado/descartado.
+    assert taller.post("/vida/pendientes/marcar?mundo=taberna",
+                       json={"id": "no-existe", "estado": "jugado"}).status_code == 400
+    assert taller.post("/vida/pendientes/marcar?mundo=taberna",
+                       json={"id": cola[1]["id"], "estado": "quemado"}).status_code == 400
+
+
+def test_los_dias_del_latido_tambien_calman(taller):
+    """Los días vividos son del ser: si vivió en paz se calma, aunque el reloj
+    del mundo no se haya movido (el latido no lo toca)."""
+    _preparar_taberna_viva(taller)
+    _con_stress(taller, "tabernero", 6.0)
+
+    r = taller.post("/vida?mundo=taberna",
+                    json={"ser_id": "tabernero", "dias": 4, "semilla": 5})
+
+    assert r.json()["stress"] == pytest.approx(4.8)          # 6.0 - 4×0.3
+    assert _stress_de(taller, "tabernero") == pytest.approx(4.8)
+    # El reloj del mundo NO se movió: los días fueron del ser.
+    assert taller.get("/reloj?mundo=taberna").json()["momento"] == "1850-03-01T00:00:00"
+
+
+def test_vida_valida_mundo_ser_rutina_y_reloj(taller):
+    # Mundo inexistente.
+    r = taller.post("/vida?mundo=no-existe", json={"ser_id": "tabernero", "dias": 1})
+    assert r.status_code == 404
+
+    _preparar_taberna_viva(taller, con_rutina=False, con_reloj=False)
+
+    # El ser_id con ruta se corta antes de tocar disco (mismo criterio que /seres).
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "../fuera", "dias": 1})
+    assert r.status_code == 400
+    # Ser inexistente.
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "fantasma", "dias": 1})
+    assert r.status_code == 404
+    # Días para atrás no hay.
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "tabernero", "dias": 0})
+    assert r.status_code == 400
+    # Sin rutina no late.
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "tabernero", "dias": 1})
+    assert r.status_code == 409
+    assert "rutina" in r.json()["detail"]
+    # Con rutina pero sin hora del mundo, tampoco.
+    (taller.raiz_mundos / "taberna/seres/tabernero/rutina.json").write_text(
+        json.dumps(RUTINA_TABERNA), encoding="utf-8"
+    )
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "tabernero", "dias": 1})
+    assert r.status_code == 409
+    assert "hora" in r.json()["detail"]
+    # Una rutina malformada da 400 legible, no un stacktrace.
+    (taller.raiz_mundos / "taberna/seres/tabernero/rutina.json").write_text(
+        json.dumps({"plantillas": [{"id": "solo-una", "texto": "poca vida"}]}),
+        encoding="utf-8",
+    )
+    taller.post("/reloj?mundo=taberna", json={"momento": "1850-03-01T00:00:00"})
+    r = taller.post("/vida?mundo=taberna", json={"ser_id": "tabernero", "dias": 1})
+    assert r.status_code == 400
+    assert "3 y 20" in r.json()["detail"]
+
+
 # ----- Zona Templates y tests -----
 
 def test_editar_un_template_permitido(taller, tmp_path, monkeypatch):
@@ -797,6 +931,314 @@ def test_requests_de_otro_origen_se_rechazan(taller):
                     headers={"Origin": "https://malicioso.example"})
     assert r.status_code == 403
     assert taller.get("/mundos").json() == []
+
+
+# ----- La descarga de stress: el tiempo en paz calma -----
+
+def _con_stress(taller, ser_id, cuanto, mundo="taberna"):
+    """Deja al ser con esa barra, por la puerta única."""
+    from codex.persistencia import Persistencia
+    p = Persistencia(taller.raiz_mundos / mundo)
+    p.guardar_estado_reglas(ser_id, {"stress": cuanto})
+    p.cerrar()
+
+
+def _stress_de(taller, ser_id, mundo="taberna"):
+    from codex.persistencia import Persistencia
+    p = Persistencia(taller.raiz_mundos / mundo)
+    valor = p.leer_estado_reglas(ser_id).get("stress", 0.0)
+    p.cerrar()
+    return valor
+
+
+def test_avanzar_el_reloj_descarga_el_stress(taller):
+    """El mismo tick que enfría los memes calma a los seres."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 6.0)
+    taller.post("/reloj?mundo=taberna", json={"momento": "1850-03-01T09:00"})
+
+    taller.post("/reloj/avanzar?mundo=taberna", json={"horas": 0, "dias": 4})
+
+    assert _stress_de(taller, "tabernero") == pytest.approx(4.8)   # 6.0 - 4×0.3
+
+
+def test_fijar_la_hora_no_descarga_el_stress(taller):
+    """Fijar es teletransporte autoral, no tiempo vivido: no calma a nadie
+    (la misma regla que ya rige para el decaimiento de los memes)."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 6.0)
+
+    taller.post("/reloj?mundo=taberna", json={"momento": "1850-04-01T09:00"})
+
+    assert _stress_de(taller, "tabernero") == 6.0
+
+
+def test_un_ser_que_nunca_jugo_un_score_no_se_rompe_al_calmarse(taller):
+    """El stress vive en la capa de reglas; un ser sin Scores jugados no tiene
+    nada registrado, y el paso del tiempo tiene que ser inofensivo para él."""
+    _mundo_armado(taller)
+    taller.post("/reloj?mundo=taberna", json={"momento": "1850-03-01T09:00"})
+
+    r = taller.post("/reloj/avanzar?mundo=taberna", json={"horas": 0, "dias": 3})
+
+    assert r.status_code == 200
+    assert _stress_de(taller, "tabernero") == 0.0
+
+
+# ----- El desborde: la cicatriz se propone, no se impone -----
+
+CICATRIZ = json.dumps({
+    "escena": "Se quedó callado mucho después de que lo soltaran.",
+    "cicatriz": {"meme_id": "lo_que_no_se_grita", "texto": "Gritar no sirve de nada.",
+                 "peso_inicial": 2.0, "costo": 10,
+                 "justificacion": "no gritó cuando lo arrastraron"},
+}, ensure_ascii=False)
+
+# La cicatriz tiene que ser una idea NUEVA para estos tests. Con el encoder por
+# defecto todo se parece a todo (similitud 1.0) y el chequeo de duplicado la
+# convertiría en un refuerzo del meme que el ser ya tiene: un dato degenerado no
+# prueba nada de la calibración (lessons.md, 2026-07-30). Este vector queda por
+# debajo del umbral contra cualquiera de los del tabernero, sin importar el orden
+# en que corran los tests. Que la cicatriz YA creída llegue como refuerzo lo
+# prueba tests/test_trauma.py, con similitudes guionadas.
+VECTORES["Gritar no sirve de nada."] = [0.0, 1.0]
+
+
+def _pedir_cicatriz(taller):
+    return taller.post("/trauma/pedir?mundo=taberna", json={"ser_id": "tabernero"})
+
+
+def test_pedir_la_cicatriz_no_aplica_nada(taller):
+    """El corazón del asunto: el ser propone, el autor dispone. Pedir no toca
+    ni el memetario ni la barra."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 9.0)
+    taller.cliente_llm.respuesta_por_defecto = CICATRIZ
+
+    r = _pedir_cicatriz(taller)
+
+    assert r.status_code == 200
+    assert "callado" in r.json()["escena"]
+    assert r.json()["propuesta"]["meme_id"] == "lo_que_no_se_grita"
+    # Nada se aplicó: el meme no existe ni en el estado vivo ni en la semilla.
+    assert "lo_que_no_se_grita" not in taller.get(
+        "/seres/tabernero/estado?mundo=taberna").json()
+    seres = taller.get("/seres?mundo=taberna").json()
+    assert all(m["id"] != "lo_que_no_se_grita" for m in seres[0]["memes"])
+    assert _stress_de(taller, "tabernero") == 9.0          # la barra sigue llena
+
+
+def test_pedir_la_cicatriz_sin_estar_desbordado_da_409(taller):
+    _mundo_armado(taller)
+
+    r = _pedir_cicatriz(taller)
+
+    assert r.status_code == 409
+    assert "desbord" in r.json()["detail"].lower()
+
+
+def test_la_cicatriz_se_puede_volver_a_pedir(taller):
+    """Si se perdió la tarjeta (recargaste la página), el ser sigue desbordado:
+    la barra llena ES la marca, no hay estado pendiente que rescatar."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 9.0)
+    taller.cliente_llm.respuesta_por_defecto = CICATRIZ
+
+    assert _pedir_cicatriz(taller).status_code == 200
+    assert _pedir_cicatriz(taller).status_code == 200
+
+
+def test_si_el_llm_no_da_cicatriz_valida_avisa_y_la_barra_no_se_toca(taller):
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 9.0)
+    taller.cliente_llm.respuesta_por_defecto = "no hay json acá"
+
+    r = _pedir_cicatriz(taller)
+
+    assert r.status_code == 422
+    assert _stress_de(taller, "tabernero") == 9.0
+
+
+def test_aprobar_la_cicatriz_la_siembra_y_vacia_la_barra(taller):
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 9.0)
+    taller.cliente_llm.respuesta_por_defecto = CICATRIZ
+    propuesta = _pedir_cicatriz(taller).json()["propuesta"]
+
+    r = taller.post("/trauma/resolver?mundo=taberna", json={
+        "ser_id": "tabernero", "decision": "aprobar", "propuesta": propuesta})
+
+    assert r.status_code == 200
+    assert r.json()["stress"] == 0.0
+    assert _stress_de(taller, "tabernero") == 0.0
+    estado = taller.get("/seres/tabernero/estado?mundo=taberna").json()
+    assert estado["lo_que_no_se_grita"]["peso"] == 2.0      # sembrado con su peso humilde
+    seres = taller.get("/seres?mundo=taberna").json()       # y entró a la SEMILLA
+    assert any(m["id"] == "lo_que_no_se_grita" for m in seres[0]["memes"])
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "trauma_aplicada"
+
+
+def test_rechazar_la_cicatriz_no_siembra_nada_y_deja_la_barra_a_la_mitad(taller):
+    """El ser aguantó: no queda cicatriz, pero aguantar tampoco es gratis —
+    si no bajara, el desborde volvería a pedir lo mismo en cada escena."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 9.0)
+    taller.cliente_llm.respuesta_por_defecto = CICATRIZ
+    propuesta = _pedir_cicatriz(taller).json()["propuesta"]
+
+    r = taller.post("/trauma/resolver?mundo=taberna", json={
+        "ser_id": "tabernero", "decision": "rechazar", "propuesta": propuesta})
+
+    assert r.status_code == 200
+    assert r.json()["stress"] == 4.5                       # la mitad del techo (9)
+    assert _stress_de(taller, "tabernero") == 4.5
+    assert "lo_que_no_se_grita" not in taller.get(
+        "/seres/tabernero/estado?mundo=taberna").json()
+    entradas = taller.get("/bitacora?mundo=taberna").json()
+    assert entradas[0]["tipo"] == "trauma_rechazada"
+
+
+def test_el_score_avisa_cuando_el_ser_quedo_desbordado(taller):
+    """La página tiene que poder mostrar la tarjeta sin ir a buscar nada."""
+    _mundo_armado(taller)
+    taller.post("/clocks?mundo=taberna", json={
+        "id": "amenaza", "nombre": "El mar se enturbia", "segmentos_total": 6})
+    _con_stress(taller, "tabernero", 7.0)
+    taller.cliente_llm.respuesta_por_defecto = "Lo agarran del brazo."
+    taller.rng.cargar([2, 2, 2])          # mala consecuencia: carga 2 → 7 + 2 = 9 (techo)
+
+    ev = taller.post("/score/evaluar?mundo=taberna", json={
+        "ser_id": "tabernero", "accion": "escuchar",
+        "descripcion": "Quedarse detrás de la barra oyendo a los pescadores."}).json()
+    r = taller.post("/score/tirar?mundo=taberna", json={**ev, "empuje": None}).json()
+
+    assert r["stress"] == 9.0
+    assert r["desbordado"] is True
+
+
+def test_un_score_que_no_llena_la_barra_no_avisa_desborde(taller):
+    _mundo_armado(taller)
+    taller.post("/clocks?mundo=taberna", json={
+        "id": "amenaza", "nombre": "El mar se enturbia", "segmentos_total": 6})
+    taller.cliente_llm.respuesta_por_defecto = "Escucha y calla."
+    taller.rng.cargar([6, 6, 6])                            # limpio: no carga nada
+
+    ev = taller.post("/score/evaluar?mundo=taberna", json={
+        "ser_id": "tabernero", "accion": "escuchar",
+        "descripcion": "Quedarse detrás de la barra oyendo a los pescadores."}).json()
+    r = taller.post("/score/tirar?mundo=taberna", json={**ev, "empuje": None}).json()
+
+    assert r["desbordado"] is False
+
+
+def test_el_template_del_trauma_se_edita_desde_el_taller(taller):
+    assert taller.get("/templates/trauma").status_code == 200
+
+
+def test_la_lista_de_seres_trae_la_barra_para_mostrarla(taller):
+    """El diseño pide que la barra esté siempre a la vista: la ficha necesita el
+    stress actual y su techo sin pedir nada aparte."""
+    _mundo_armado(taller)
+    _con_stress(taller, "tabernero", 7.0)
+
+    ser = taller.get("/seres?mundo=taberna").json()[0]
+
+    assert ser["stress"] == 7.0
+    assert ser["hoja"]["stress_max"] == 9
+
+
+# ----- El bias circadiano en las puertas del Taller -----
+
+def _ser_noctambulo(**extra):
+    """Dos memes que empatan en todo -mismo peso, misma afinidad- salvo el tipo,
+    y mana para UNO solo. Así lo único que puede desempatar es la hora del mundo:
+    si el bias no está enchufado, la franja horaria no cambia nada."""
+    base = {
+        "ser_id": "noctambulo",
+        "mana_max": 10,
+        "memes": [
+            {"id": "PF-guardia", "tipo": "fundacional",
+             "texto": "El puerto no se cuida solo.", "peso_inicial": 9.0},
+            {"id": "rutina-del-muelle", "tipo": "operativo",
+             "texto": "Barrer el muelle antes de que abran.", "peso_inicial": 5.0, "costo": 10},
+            {"id": "corazonada-del-agua", "tipo": "experimental",
+             "texto": "Algo respira debajo del agua.", "peso_inicial": 5.0, "costo": 10},
+        ],
+        "hoja": {"stress_max": 9, "acciones": {"acechar": 2}},
+    }
+    base.update(extra)
+    return base
+
+
+def _puerto(taller):
+    taller.post("/mundos", json={"nombre": "puerto"})
+    taller.post("/seres?mundo=puerto", json=_ser_noctambulo())
+
+
+DIA = "1850-03-01T10:00"
+NOCHE = "1850-03-01T23:00"
+
+
+def _memes_del_dialogo(taller, momento):
+    taller.post("/reloj?mundo=puerto", json={"momento": momento})
+    r = taller.post("/dialogo?mundo=puerto", json={
+        "ser_id": "noctambulo", "historial": [], "mensaje": "¿Qué estás mirando?",
+    })
+    assert r.status_code == 200
+    return {m["id"] for m in r.json()["memes_activos"]}
+
+
+def test_la_hora_del_mundo_inclina_el_cristal_en_el_dialogo(taller):
+    """De día pesa lo práctico; de noche, lo exploratorio (codex/bias.py)."""
+    _puerto(taller)
+    taller.cliente_llm.respuesta_por_defecto = "Nada. El agua."
+
+    assert _memes_del_dialogo(taller, DIA) == {"PF-guardia", "rutina-del-muelle"}
+    assert _memes_del_dialogo(taller, NOCHE) == {"PF-guardia", "corazonada-del-agua"}
+
+
+def test_la_hora_del_mundo_inclina_el_cristal_en_el_score(taller):
+    _puerto(taller)
+    taller.post("/clocks?mundo=puerto", json={
+        "id": "amenaza", "nombre": "La marea sube", "segmentos_total": 6,
+    })
+    accion = {"ser_id": "noctambulo", "accion": "acechar",
+              "descripcion": "Se queda quieto en la punta del muelle, mirando el agua."}
+
+    taller.post("/reloj?mundo=puerto", json={"momento": DIA})
+    de_dia = taller.post("/score/evaluar?mundo=puerto", json=accion).json()
+    taller.post("/reloj?mundo=puerto", json={"momento": NOCHE})
+    de_noche = taller.post("/score/evaluar?mundo=puerto", json=accion).json()
+
+    def ids(evaluado):
+        return {m["id"] for m in evaluado["contexto"]["loadout"]["seleccionados"]}
+
+    assert ids(de_dia) == {"PF-guardia", "rutina-del-muelle"}
+    assert ids(de_noche) == {"PF-guardia", "corazonada-del-agua"}
+
+
+def test_la_hora_del_mundo_inclina_el_cristal_al_escuchar(taller):
+    """En la transmisión la hora la trae el pedido (el momento de la escena),
+    no el reloj guardado: se escucha a la hora en que el emisor habla."""
+    import json as _json
+    _puerto(taller)
+    taller.post("/hechos?mundo=puerto", json={
+        "id": "luz-en-la-bahia", "contenido": "Hubo una luz bajo el agua, frente al faro.",
+        "momento": "1850-03-01T04:00", "lugar": "la bahía", "testigo": "el_farero",
+    })
+    taller.cliente_llm.respuesta_por_defecto = _json.dumps({
+        "contenido_entendido": "Una luz, debajo del agua.", "memes_resonantes": [],
+    }, ensure_ascii=False)
+
+    taller.post("/transmitir?mundo=puerto", json={
+        "emisor_id": "el_farero", "receptor_id": "noctambulo",
+        "version_id": "luz-en-la-bahia-raiz", "momento": NOCHE,
+    })
+
+    estado = taller.get("/seres/noctambulo/estado?mundo=puerto").json()
+    assert estado["corazonada-del-agua"]["veces_en_loadout"] == 1
+    assert estado["rutina-del-muelle"]["veces_en_loadout"] == 0
 
 
 # ----- La página -----

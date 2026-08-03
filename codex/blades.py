@@ -77,6 +77,12 @@ UMBRAL_MEME_RELEVANTE = 0.75   # afinidad para que un meme cuente para el efecto
 RELEVANTES_PARA_GRANDE = 3     # 3+ memes relevantes → grande; 1-2 → estándar; 0 → limitado
 
 COSTO_EMPUJE = 2               # stress que paga cada empuje (uno solo por tirada)
+# Lo que le cuesta al SER lo que le pasó, sin que el autor elija pagarlo. Antes la
+# barra solo subía por empuje, así que medía cuántas veces el autor apretó el
+# acelerador y no lo que el personaje vivió (el mismo bug que en julio hacía que los
+# pesos midieran la atención del autor). Provisionales: se calibran jugando.
+CARGA_CON_COSTO = 1
+CARGA_MALA_CONSECUENCIA = 2
 SEGMENTOS_MALA = 1             # cuánto avanza el clock de amenaza una mala consecuencia
 SEGMENTOS_MALA_DESESPERADA = 2  # ...y cuánto si además la posición era desesperada
 
@@ -203,6 +209,17 @@ class SistemaBlades:
                 else SEGMENTOS_MALA
             )
             efectos.append(AvanzarClock(clock_id=self.clock_amenaza_id, segmentos=segmentos))
+
+        # El golpe carga la barra del ser, aparte de lo que el autor haya gastado
+        # empujando: la barra mide lo vivido, no lo apostado.
+        carga = {
+            CategoriaResultado.CON_COSTO: CARGA_CON_COSTO,
+            CategoriaResultado.MALA_CONSECUENCIA: CARGA_MALA_CONSECUENCIA,
+        }.get(categoria)
+        if carga:
+            efectos.append(
+                PagarStress(ser_id=evaluacion.accion.ser_id, cantidad=carga)
+            )
 
         return Resolucion(
             evaluacion=evaluacion,

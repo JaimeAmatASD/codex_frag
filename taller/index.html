@@ -228,6 +228,21 @@
       <div id="scResultado"></div>
     </div>
     <div class="panel">
+      <h2>Vivir N días — la vida ociosa (cero tokens)</h2>
+      <p class="tenue">El latido: ticks de rutina contra el memetario, micro-refuerzos y decaimiento
+      diario. Los momentos calientes quedan en la cola de abajo: jugarlos ES usar las
+      herramientas de siempre.</p>
+      <div class="fila">
+        <div><label>quién vive</label><select id="viSer"></select></div>
+        <div><label>días</label><input id="viDias" type="number" value="7" min="1"></div>
+        <div><label>semilla (opcional)</label><input id="viSemilla" placeholder="azar"></div>
+      </div>
+      <button class="accion" onclick="vivirDias(this)">Vivir</button>
+      <div id="viResultado"></div>
+      <h2 style="margin-top:1.2rem;">Momentos calientes pendientes</h2>
+      <div id="viPendientes" class="tenue">…</div>
+    </div>
+    <div class="panel">
       <h2>La suite de tests</h2>
       <button class="accion" onclick="correrTests(this)">Correr los tests</button>
       <div id="testsResultado"></div>
@@ -506,12 +521,15 @@ async function cargarSeres() {
         <b>${esc(ser.ser_id)}</b> <span class="chip">origen: ${esc(ser.origen)}</span>
         <span class="chip">mana: ${ser.mana_max}</span>
         ${ser.hoja ? `<span class="chip">hoja: ${esc(Object.entries(ser.hoja.acciones).map(([a,r])=>a+' '+r).join(' · '))}</span>` : '<span class="chip">sin hoja</span>'}
+        ${chipStress(ser)}
         <button class="suave" data-ser="${esc(ser.ser_id)}" onclick="editarSer(this.dataset.ser)">editar</button>
         <button class="accion" data-ser="${esc(ser.ser_id)}" onclick="mirarSer(this.dataset.ser, this)">Que se mire (LLM real)</button>
+        ${desbordo(ser) ? `<button class="accion" data-ser="${esc(ser.ser_id)}" onclick="pedirCicatriz(this.dataset.ser, this)">Se desbordó — que aparezca la cicatriz</button>` : ''}
         <details><summary class="tenue">el cristal, viviendo (pesos y activaciones)</summary>
           <table id="estado-${esc(ser.ser_id)}"><tr><th>meme</th><th>peso</th><th>en loadout</th><th>movilizado</th></tr>${filas}</table>
         </details>
         <div id="espejo-${esc(ser.ser_id)}"></div>
+        <div id="cicatriz-${esc(ser.ser_id)}"></div>
       </div>`);
   }
   const ids = seres.map(s => s.ser_id);
@@ -519,6 +537,63 @@ async function cargarSeres() {
   document.body.insertAdjacentHTML('beforeend',
     `<datalist id="listaIdsSeres">${ids.map(i => `<option>${esc(i)}</option>`).join('')}</datalist>`);
 }
+// ----- La barra de stress: siempre a la vista -----
+
+function desbordo(ser) { return !!ser.hoja && ser.stress >= ser.hoja.stress_max; }
+
+function chipStress(ser) {
+  if (!ser.hoja) return '';
+  const techo = ser.hoja.stress_max;
+  const lleno = Math.min(Math.round(ser.stress), techo);
+  const barra = '█'.repeat(lleno) + '·'.repeat(Math.max(0, techo - lleno));
+  return `<span class="chip" title="stress: lo que el ser aguantó">` +
+    `${desbordo(ser) ? '⚠ ' : ''}${barra} ${ser.stress.toFixed(1)}/${techo}</span>`;
+}
+
+// ----- El desborde: la cicatriz se propone, el autor dispone -----
+
+async function pedirCicatriz(serId, boton) {
+  const caja = document.getElementById(`cicatriz-${serId}`);
+  boton.disabled = true; boton.textContent = 'Se rompe…';
+  try {
+    const r = await api('POST', '/trauma/pedir', {ser_id: serId});
+    window.CICATRIZ = window.CICATRIZ || {};
+    window.CICATRIZ[serId] = r.propuesta;
+    const p = r.propuesta;
+    const que = p.tipo === 'ajustar_peso'
+      ? `esto ya lo creía y se le grabó más hondo: <b>${esc(p.meme_id)}</b> ` +
+        `sube ${p.delta > 0 ? '+' : ''}${p.delta}`
+      : `le queda una idea nueva: <b>${esc(p.meme_id)}</b> — «${esc(p.texto)}» ` +
+        `(peso ${p.peso_inicial}, costo ${p.costo})`;
+    // La escena primero: es lo único de todo esto que se lee.
+    caja.innerHTML = `
+      <div style="margin:.4rem 0; padding:.6rem; border:1px solid var(--borde); border-radius:8px;">
+        <p style="font-style:italic; margin:.2rem 0 .6rem;">${esc(r.escena)}</p>
+        ${que}<br><span class="tenue">porque: ${esc(p.justificacion)}</span><br>
+        <button class="accion" onclick="resolverCicatriz('${esc(serId)}', 'aprobar', this)">Aprobar la cicatriz</button>
+        <button class="suave" onclick="resolverCicatriz('${esc(serId)}', 'rechazar', this)">Aguantó</button>
+      </div>`;
+  } finally {
+    boton.disabled = false; boton.textContent = 'Se desbordó — que aparezca la cicatriz';
+  }
+}
+
+async function resolverCicatriz(serId, decision, boton) {
+  boton.disabled = true;
+  try {
+    const r = await api('POST', '/trauma/resolver',
+      {ser_id: serId, decision, propuesta: window.CICATRIZ[serId]});
+    const e = r.efecto;
+    boton.closest('div').innerHTML = decision === 'aprobar'
+      ? `<span class="verde">✔ le quedó — ` +
+        (e.antes !== undefined ? `peso de ${esc(e.meme)}: ${e.antes} → ${e.despues}`
+                               : `${esc(e.meme)} sembrado con peso ${e.sembrado}`) +
+        `. La barra volvió a 0.</span>`
+      : `<span class="tenue">Aguantó: no le quedó cicatriz, y la barra bajó a ${r.stress}.</span>`;
+    await cargarSeres();      // la barra y el botón del desborde cambian
+  } catch (err) { boton.disabled = false; }
+}
+
 // ----- El espejo (SPECULUM): el ser se mira, el autor dispone -----
 
 async function mirarSer(serId, boton) {
@@ -737,6 +812,8 @@ async function cargarProbar() {
     api('GET', '/seres'), api('GET', '/hechos'), api('GET', '/clocks')]);
   window.SERES = seres; window.ARBOLES = arboles;
   $('#trReceptor').innerHTML = seres.map(s => `<option>${esc(s.ser_id)}</option>`).join('');
+  $('#viSer').innerHTML = seres.map(s => `<option>${esc(s.ser_id)}</option>`).join('');
+  cargarPendientes().catch(() => {});
   $('#scSer').innerHTML = seres.filter(s => s.hoja).map(s => `<option>${esc(s.ser_id)}</option>`).join('');
   cargarAccionesDe($('#scSer').value);
   $('#trVersion').innerHTML = arboles.flatMap(({hecho, versiones}) =>
@@ -758,6 +835,61 @@ function cargarAccionesDe(serId) {
 async function crearClockRapido() {
   await api('POST', '/clocks', {id: 'amenaza', nombre: 'El mar se enturbia', segmentos_total: 6});
   await cargarProbar();
+}
+async function vivirDias(boton) {
+  boton.disabled = true; boton.textContent = 'Viviendo…';
+  try {
+    const semilla = $('#viSemilla').value.trim();
+    const r = await api('POST', '/vida', {
+      ser_id: $('#viSer').value,
+      dias: parseInt($('#viDias').value || '1', 10),
+      semilla: semilla ? parseInt(semilla, 10) : null,
+    });
+    const deltas = Object.entries(r.deltas).sort((a, b) => b[1] - a[1]);
+    const filas = deltas.map(([id, d]) =>
+      `<span class="${d > 0.005 ? 'verde' : d < -0.005 ? 'rojo' : 'tenue'}">` +
+      `${r.pesos_inicio[id].toFixed(2)} → ${r.pesos_fin[id].toFixed(2)} (${d >= 0 ? '+' : ''}${d.toFixed(2)})</span> ${esc(id)}`
+    ).join('<br>');
+    $('#viResultado').innerHTML = `
+      <div class="resultado">
+        <span class="tenue">${r.dias_vividos} día(s) vividos · ${r.pendientes.length} momento(s) caliente(s) nuevos</span><br><br>
+        ${filas}</div>`;
+    await cargarPendientes();
+  } finally { boton.disabled = false; boton.textContent = 'Vivir'; }
+}
+async function cargarPendientes() {
+  const lista = await api('GET', '/vida/pendientes');
+  window.PENDIENTES = lista.filter(m => m.estado === 'pendiente');
+  const abiertos = window.PENDIENTES;
+  $('#viPendientes').innerHTML = abiertos.length
+    ? '' : 'La cola está vacía: la vida no trajo nada caliente todavía.';
+  abiertos.forEach((m, i) => {
+    $('#viPendientes').insertAdjacentHTML('beforeend', `
+      <div class="resultado">
+        <span class="tenue">${esc(m.ser_id)} · ${esc(m.momento)} · cristal despierto: ${esc(m.loadout_ids.join(', '))}</span><br>
+        «${esc(m.situacion)}»<br>
+        <button class="suave" onclick="pendienteAScore(${i})">Jugarlo como Score</button>
+        <button class="suave" onclick="pendienteATransmitir(${i})">Contarle algo en ese momento</button>
+        <button class="suave" onclick="marcarPendiente(${i}, 'jugado')">Marcar jugado</button>
+        <button class="suave" onclick="marcarPendiente(${i}, 'descartado')">Descartar</button>
+      </div>`);
+  });
+}
+function pendienteAScore(i) {
+  const m = window.PENDIENTES[i];
+  $('#scSer').value = m.ser_id; cargarAccionesDe(m.ser_id);
+  $('#scDescripcion').value = m.situacion;
+  $('#scDescripcion').scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+function pendienteATransmitir(i) {
+  const m = window.PENDIENTES[i];
+  $('#trReceptor').value = m.ser_id;
+  $('#trMomento').value = m.momento;
+  $('#trReceptor').scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+async function marcarPendiente(i, estado) {
+  await api('POST', '/vida/pendientes/marcar', {id: window.PENDIENTES[i].id, estado});
+  await cargarPendientes();
 }
 async function transmitirRumor(boton) {
   boton.disabled = true; boton.textContent = 'El rumor viaja…';
@@ -810,6 +942,8 @@ async function tirarScore(empuje, boton) {
         <span class="tenue">stress: ${r.stress}/9 · clock «${esc(r.clock.nombre)}»:
         ${r.clock.segmentos_actuales}/${r.clock.segmentos_total}
         ${r.clock.estado === 'completado' ? '<b class="rojo"> ¡COMPLETADO!</b>' : ''}</span>
+        ${r.desbordado ? `<p class="rojo" style="margin:.6rem 0 0;">⚠ Se desbordó: aguantó todo lo que podía.
+        Andá a <b>Personajes</b> y pedile la cicatriz.</p>` : ''}
       </div>`;
   } finally { boton.disabled = false; }
 }

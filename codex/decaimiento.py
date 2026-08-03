@@ -29,6 +29,11 @@ TASA_DECAIMIENTO = 0.05   # Fracción del camino al piso que se recorre por cicl
 TASA_REFUERZO = 0.20      # Fracción del camino al techo que se recorre por activación.
 TASA_EROSION = 0.15       # Mejora 04: cuánto decae un meme que se erosiona por
                           # contradicción (número grueso: 3× el ciclo normal).
+TASA_REFUERZO_RUTINA = 0.02  # provisional: un décimo de la vivencia (0.20); se tunea jugando
+TASA_DESCARGA_STRESS = 0.3   # Stress que descarga cada día vivido en paz. Sale del
+                             # criterio del diseño: un mes tranquilo vacía una barra
+                             # llena (30 días × 0.3 = 9, el techo). Provisional.
+                             # Sin vicio todavía, esta es la única válvula.
 
 
 def decaer(
@@ -62,9 +67,13 @@ def aplicar_decaimiento(
 
 
 def reforzar_movilizados(
-    memetario: Memetario, persistencia: Persistencia, movilizados_ids: list[str]
+    memetario: Memetario,
+    persistencia: Persistencia,
+    movilizados_ids: list[str],
+    tasa: float = TASA_REFUERZO,
 ) -> dict[str, float]:
-    """Refuerza el peso de los memes efectivamente usados. Las PF no se tocan."""
+    """Refuerza el peso de los memes efectivamente usados. Las PF no se tocan.
+    `tasa` distingue regímenes: la vivencia usa la default; la rutina, una menor."""
     movilizados = set(movilizados_ids)
     vivos = memetario.memes_vivos()
 
@@ -76,7 +85,7 @@ def reforzar_movilizados(
         )
 
     nuevos = {
-        m.id: reforzar(m.peso)
+        m.id: reforzar(m.peso, tasa=tasa)
         for m in vivos
         if m.id in movilizados
         and m.tipo != TipoMeme.FUNDACIONAL
@@ -107,3 +116,23 @@ def aplicar_contradicciones(
     if nuevos:
         persistencia.actualizar_pesos(memetario.ser.ser_id, nuevos)
     return nuevos
+
+
+def descargar_stress(persistencia: Persistencia, ser_id: str, dias: float) -> float:
+    """El tiempo vivido en paz descarga la barra de stress. Devuelve el stress nuevo.
+
+    A diferencia del peso de un meme (que decae asintóticamente y nunca alcanza su
+    piso), el stress SÍ llega a cero: un ser puede quedar en paz del todo. El tiempo
+    que cuenta es el VIVIDO -avanzar el reloj del mundo, vivir días de rutina-, no
+    el fijado a mano: fijar la hora es teletransporte autoral, no vida (misma regla
+    que ya rige para el decaimiento desde el paso 1).
+
+    Escribe por la puerta única (regla 2). Mientras no exista el vicio, esta es la
+    única válvula de la barra (docs/DISENO_DESBORDE.md)."""
+    actual = persistencia.leer_estado_reglas(ser_id).get("stress", 0.0)
+    if dias <= 0:
+        return actual
+    nuevo = max(0.0, actual - TASA_DESCARGA_STRESS * dias)
+    if nuevo != actual:
+        persistencia.guardar_estado_reglas(ser_id, {"stress": nuevo})
+    return nuevo

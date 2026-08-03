@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import re
 from pathlib import Path
+from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -23,9 +25,10 @@ from pydantic import BaseModel, ValidationError
 
 from datetime import datetime, timedelta
 
+from codex.bias import BiasCircadiano, bias_a_la_hora
 from codex.blades import HojaMecanica, SistemaBlades, memes_movilizados, narrar_resolucion
 from codex.clocks import Clock
-from codex.decaimiento import PISO, aplicar_decaimiento, reforzar_movilizados
+from codex.decaimiento import PISO, aplicar_decaimiento, descargar_stress, reforzar_movilizados
 from codex.dialogo import responder_dialogo
 from codex.embeddings import MODELO_POR_DEFECTO, Embeddings
 from codex.grafo_mundo import GrafoMundo
@@ -53,7 +56,9 @@ from codex.reglas import (
 from codex.reloj import RelojSimple
 from codex.singularidades import Singularidad, chequear_singularidades
 from codex.transmision import transmitir
-from taller import bitacora
+from codex.trauma import Cicatriz, SituacionDesborde, desbordado, pedir_cicatriz
+from codex.vida import cargar_rutina, vivir
+from taller import bitacora, pendientes
 from taller.derivacion import derivar_ser
 
 logger = logging.getLogger(__name__)
@@ -71,6 +76,7 @@ TEMPLATES_EDITABLES = {
     "derivar_ser": "derivar_ser.txt",
     "dialogo": "dialogo.txt",
     "speculum": "speculum.txt",
+    "trauma": "trauma.txt",
 }
 CARPETA_TESTS = RAIZ_REPO / "tests"   # el runner solo corre lo que vive acá adentro
 TIMEOUT_TESTS = 300
@@ -192,6 +198,34 @@ class CuerpoAplicar(BaseModel):
     propuesta: Propuesta
 
 
+class CuerpoTrauma(BaseModel):
+    """Pedirle la cicatriz a un ser desbordado."""
+
+    ser_id: str
+
+
+class CuerpoResolverTrauma(BaseModel):
+    """El autor dispone: aprueba la cicatriz, o el ser aguantó."""
+
+    ser_id: str
+    decision: Literal["aprobar", "rechazar"]
+    propuesta: Propuesta
+
+
+class CuerpoVida(BaseModel):
+    """Vivir N días de rutina (el latido, cero LLM). La semilla es opcional:
+    con ella la corrida es reproducible; sin ella, la vida es la que salga."""
+
+    ser_id: str
+    dias: int
+    semilla: int | None = None
+
+
+class CuerpoMarcarPendiente(BaseModel):
+    id: str
+    estado: str   # 'jugado' o 'descartado'; lo valida la cola
+
+
 class CuerpoPesos(BaseModel):
     """El modo editar del diálogo: tocar el peso VIVO a mano, la puerta única
     (Persistencia.actualizar_pesos), aparte de la semilla en ser.json."""
@@ -199,12 +233,15 @@ class CuerpoPesos(BaseModel):
     pesos: dict[str, float]
 
 
-def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
+def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None,
+              carpeta_pendientes=None) -> FastAPI:
     """Arma la app del taller. `cliente_llm`, `encoder` y `rng` se inyectan en tests;
-    si vienen en None se usan los reales (Gemini, fastembed, azar) al primer uso."""
+    si vienen en None se usan los reales (Gemini, fastembed, azar) al primer uso.
+    `carpeta_pendientes` es la cola de momentos calientes (default: taller/pendientes)."""
     app = FastAPI(title="El Taller — Codex Fragmentum")
     raiz = Path(raiz_mundos)
     raiz.mkdir(parents=True, exist_ok=True)
+    cola_pendientes = Path(carpeta_pendientes) if carpeta_pendientes else pendientes.CARPETA_POR_DEFECTO
     # Recursos compartidos entre requests (el modelo de embeddings es pesado: UNA carga).
     recursos = {"cliente": cliente_llm, "encoder": encoder, "encoder_fallo": False, "rng": rng}
 
@@ -268,6 +305,48 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
                 recursos["encoder_fallo"] = True
                 logger.error("El taller queda sin embeddings (%s); el motor degrada.", e)
         return Embeddings(p, encoder=recursos["encoder"])
+
+    def _aplicar_propuesta(ser: Ser, prop, p: Persistencia) -> tuple[dict, str]:
+        """Aplica UNA propuesta aprobada por el autor y devuelve (efecto, salida).
+
+        La usan las dos puertas que aprueban propuestas -el espejo y el desborde-:
+        el ritual es el mismo, cambia solo qué lo disparó. La fricción también vive
+        acá: se revalida contra el ser antes de tocar nada (PF intocables, degradé),
+        aunque la propuesta ya venga validada de su origen."""
+        # El handler de ValueError vuelve esto un 400 legible en el formulario.
+        validar_contra_ser(Mirada(reflexion="(aprobada por el autor)", propuestas=[prop]), ser)
+
+        if prop.tipo == "ajustar_peso":
+            Memetario(ser, p)   # garantiza estado sembrado antes de leerlo
+            actual = p.leer_estado(ser.ser_id)[prop.meme_id].peso
+            # Mismo piso que el decaimiento: el peso nunca baja de la asíntota.
+            nuevo = max(PISO, actual + prop.delta)
+            p.actualizar_pesos(ser.ser_id, {prop.meme_id: nuevo})
+            return ({"meme": prop.meme_id, "antes": actual, "despues": nuevo},
+                    f"peso de {prop.meme_id}: {actual:g} → {nuevo:g}")
+
+        # proponer_experimental: entra a la SEMILLA y se siembra su estado
+        ser.memes.append(Meme(
+            id=prop.meme_id, tipo="experimental", texto=prop.texto,
+            peso_inicial=prop.peso_inicial, costo=prop.costo,
+        ))
+        (p.carpeta_seres / ser.ser_id / "ser.json").write_text(
+            json.dumps(ser.model_dump(), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        Memetario(ser, p)   # siembra el meme nuevo (INSERT OR IGNORE: no pisa nada)
+        return ({"meme": prop.meme_id, "sembrado": prop.peso_inicial},
+                f"meme experimental sembrado: {prop.meme_id} (peso {prop.peso_inicial:g})")
+
+    def _stress_max(p: Persistencia, ser_id: str) -> float:
+        """El techo de la barra del ser, de su hoja mecánica. Sin hoja no hay Score
+        ni barra: el ser no puede desbordarse."""
+        datos = p.cargar_hoja_reglas(ser_id)
+        if datos is None:
+            raise HTTPException(
+                409, f"{ser_id} no tiene hoja mecánica: no juega Scores ni se desborda."
+            )
+        return HojaMecanica(**datos).stress_max
 
     def _blades(p: Persistencia) -> SistemaBlades:
         """El sistema de reglas del mundo: todas las hojas + el clock de amenaza."""
@@ -333,8 +412,10 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
 
     def _enfriar_seres(p: Persistencia, dias: float) -> None:
         """Paso 1 de la vida ociosa: el tiempo que pasa enfría los memes no
-        fundacionales de TODOS los seres del mundo. Un ciclo de decaimiento =
-        un día del mundo; los tramos fraccionarios componen exacto."""
+        fundacionales de TODOS los seres del mundo y descarga su stress. Un ciclo
+        de decaimiento = un día del mundo; los tramos fraccionarios componen
+        exacto. El stress baja lineal y sí llega a cero: un ser al que dejan en
+        paz se calma del todo (docs/DISENO_DESBORDE.md)."""
         if dias <= 0 or not p.carpeta_seres.is_dir():
             return
         for carpeta in sorted(p.carpeta_seres.iterdir()):
@@ -343,6 +424,7 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             except (FileNotFoundError, ValidationError):
                 continue   # carpeta sin ser.json válido: no es un ser
             aplicar_decaimiento(memetario, p, ciclos=dias)
+            descargar_stress(p, carpeta.name, dias)
 
     @app.post("/reloj/avanzar")
     def avanzar_reloj(cuerpo: CuerpoAvance, p: Persistencia = Depends(dep_persistencia)):
@@ -394,7 +476,13 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             for carpeta in sorted(p.carpeta_seres.iterdir()):
                 if (carpeta / "ser.json").exists():
                     ser = p.cargar_ser(carpeta.name)
-                    seres.append({**ser.model_dump(), "hoja": p.cargar_hoja_reglas(carpeta.name)})
+                    seres.append({
+                        **ser.model_dump(),
+                        "hoja": p.cargar_hoja_reglas(carpeta.name),
+                        # La barra va con el ser: el diseño pide tenerla siempre a
+                        # la vista, y con la hoja al lado la ficha sabe si desbordó.
+                        "stress": p.leer_estado_reglas(carpeta.name).get("stress", 0.0),
+                    })
         return seres
 
     @app.post("/seres")
@@ -409,6 +497,22 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             raise HTTPException(
                 400, "El ser_id lleva solo letras, números, guiones y guión bajo."
             )
+        # Tensiones y conexiones son referencias a memes del propio ser. El motor
+        # ignora las que no existen con un warning que nadie lee, y el ser queda
+        # corriendo sin sus grietas; acá se corta antes de escribir. Pasaba con
+        # los ids que contienen una coma: el campo se separa por comas y el id se
+        # partía en dos referencias inexistentes.
+        ids_memes = {m.id for m in ser.memes}
+        for meme in ser.memes:
+            for campo in ("tensiones", "conexiones"):
+                for ref in getattr(meme, campo):
+                    if ref not in ids_memes:
+                        raise HTTPException(
+                            400,
+                            f"El meme {meme.id!r} declara en {campo} a {ref!r}, que no es "
+                            f"un meme de este ser. Si el id que quisiste poner tiene una "
+                            f"coma, el campo lo partió en dos: los ids no llevan comas.",
+                        )
         hoja = HojaMecanica(**{**{"ser_id": ser.ser_id}, **(cuerpo.hoja or {})}) if cuerpo.hoja is not None else None
 
         carpeta = p.carpeta_seres / ser.ser_id
@@ -568,29 +672,7 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         except FileNotFoundError:
             raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
         prop = cuerpo.propuesta
-        # El handler de ValueError vuelve esto un 400 legible en el formulario.
-        validar_contra_ser(Mirada(reflexion="(aprobada por el autor)", propuestas=[prop]), ser)
-
-        if prop.tipo == "ajustar_peso":
-            Memetario(ser, p)   # garantiza estado sembrado antes de leerlo
-            actual = p.leer_estado(cuerpo.ser_id)[prop.meme_id].peso
-            # Mismo piso que el decaimiento: el peso nunca baja de la asíntota.
-            nuevo = max(PISO, actual + prop.delta)
-            p.actualizar_pesos(cuerpo.ser_id, {prop.meme_id: nuevo})
-            efecto = {"meme": prop.meme_id, "antes": actual, "despues": nuevo}
-            salida = f"peso de {prop.meme_id}: {actual:g} → {nuevo:g}"
-        else:   # proponer_experimental: entra a la SEMILLA y se siembra su estado
-            ser.memes.append(Meme(
-                id=prop.meme_id, tipo="experimental", texto=prop.texto,
-                peso_inicial=prop.peso_inicial, costo=prop.costo,
-            ))
-            (p.carpeta_seres / ser.ser_id / "ser.json").write_text(
-                json.dumps(ser.model_dump(), ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            Memetario(ser, p)   # siembra el meme nuevo (INSERT OR IGNORE: no pisa nada)
-            efecto = {"meme": prop.meme_id, "sembrado": prop.peso_inicial}
-            salida = f"meme experimental sembrado: {prop.meme_id} (peso {prop.peso_inicial:g})"
+        efecto, salida = _aplicar_propuesta(ser, prop, p)
 
         bitacora.registrar(p.carpeta, {
             "tipo": "speculum_aplicada",
@@ -600,6 +682,109 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "terminos": {"justificacion": prop.justificacion},
         })
         return {"ok": True, "efecto": efecto}
+
+    # ----- El desborde (codex/trauma.py, docs/DISENO_DESBORDE.md) -----
+
+    def _situacion_del_desborde(p: Persistencia, ser_id: str) -> SituacionDesborde:
+        """Congela la escena que llenó la barra: el último Score del ser.
+
+        Sale de la bitácora, que ya guarda todo lo que hace falta. Si el ser no
+        jugó ninguno (la barra se llenó a mano), vuelve vacía y el prompt lo dice
+        en vez de inventar una escena."""
+        scores = [
+            e for e in bitacora.leer(p.carpeta)
+            if e.get("tipo") == "score" and e.get("ser") == ser_id
+        ]
+        if not scores:
+            logger.info(
+                "El desborde de %s no tiene Score que lo explique: la barra se llenó fuera de una escena.",
+                ser_id,
+            )
+            return SituacionDesborde()
+        ultimo = scores[0]      # la bitácora llega del más reciente al más viejo
+        terminos = ultimo.get("terminos", {})
+        return SituacionDesborde(
+            accion=terminos.get("accion", ""),
+            descripcion=ultimo.get("entrada", ""),
+            categoria=terminos.get("categoria", ""),
+            posicion=terminos.get("posicion", ""),
+            narracion=ultimo.get("salida", ""),
+            memes_movilizados=terminos.get("movilizados", []),
+            tensiones=[
+                f"«{t['texto_a']}» ⇄ «{t['texto_b']}»" for t in terminos.get("tensiones", [])
+            ],
+        )
+
+    @app.post("/trauma/pedir")
+    def trauma_pedir(cuerpo: CuerpoTrauma, mundo: str, p: Persistencia = Depends(dep_persistencia)):
+        """Un ser desbordado propone su cicatriz. Acá no se aplica NADA y la barra
+        no se toca: el autor dispone en /trauma/resolver.
+
+        Se puede pedir las veces que haga falta. La barra llena ES la marca del
+        desborde, así que no hay tarjeta pendiente que rescatar si se perdió."""
+        try:
+            ser = p.cargar_ser(cuerpo.ser_id)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        if not desbordado(p.leer_estado_reglas(cuerpo.ser_id), _stress_max(p, cuerpo.ser_id)):
+            raise HTTPException(
+                409, f"{cuerpo.ser_id} no está desbordado: su barra no llegó al techo."
+            )
+
+        cicatriz, reintento = pedir_cicatriz(
+            ser, _situacion_del_desborde(p, cuerpo.ser_id), _cliente(), _embeddings(p)
+        )
+        if cicatriz is None:
+            raise HTTPException(
+                422,
+                "El desborde no devolvió una cicatriz válida: probá de nuevo o ajustá el template.",
+            )
+        propuesta = cicatriz.propuesta.model_dump()
+        bitacora.registrar(p.carpeta, {
+            "tipo": "trauma",
+            "ser": cuerpo.ser_id,
+            "entrada": "(se desborda)",
+            "salida": cicatriz.escena,
+            "terminos": {"propuesta": propuesta, "reintento": reintento},
+        })
+        return {"escena": cicatriz.escena, "propuesta": propuesta}
+
+    @app.post("/trauma/resolver")
+    def trauma_resolver(
+        cuerpo: CuerpoResolverTrauma, mundo: str, p: Persistencia = Depends(dep_persistencia)
+    ):
+        """El autor dispone. Aprobar deja la cicatriz y vacía la barra; rechazar no
+        siembra nada y la deja a la mitad del techo — el ser aguantó, pero aguantar
+        no sale gratis (si no bajara, el desborde volvería a pedir en cada escena)."""
+        try:
+            ser = p.cargar_ser(cuerpo.ser_id)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        techo = _stress_max(p, cuerpo.ser_id)
+        prop = cuerpo.propuesta
+
+        if cuerpo.decision == "rechazar":
+            nuevo = techo / 2
+            p.guardar_estado_reglas(cuerpo.ser_id, {"stress": nuevo})
+            bitacora.registrar(p.carpeta, {
+                "tipo": "trauma_rechazada",
+                "ser": cuerpo.ser_id,
+                "entrada": json.dumps(prop.model_dump(), ensure_ascii=False),
+                "salida": f"aguantó: la barra baja a {nuevo:g}",
+                "terminos": {"justificacion": prop.justificacion},
+            })
+            return {"ok": True, "stress": nuevo, "efecto": {}}
+
+        efecto, salida = _aplicar_propuesta(ser, prop, p)
+        p.guardar_estado_reglas(cuerpo.ser_id, {"stress": 0.0})
+        bitacora.registrar(p.carpeta, {
+            "tipo": "trauma_aplicada",
+            "ser": cuerpo.ser_id,
+            "entrada": json.dumps(prop.model_dump(), ensure_ascii=False),
+            "salida": salida,
+            "terminos": {"justificacion": prop.justificacion},
+        })
+        return {"ok": True, "stress": 0.0, "efecto": efecto}
 
     # ----- Zona Probar -----
 
@@ -614,9 +799,10 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         reloj = RelojSimple(datetime.fromisoformat(cuerpo.momento))
 
         # El cristal se calcula acá para poder MOSTRAR la grieta (tensiones de la
-        # escucha); transmitir lo recibe ya hecho y no lo recalcula.
+        # escucha); transmitir lo recibe ya hecho y no lo recalcula. La hora es la
+        # de la escena que manda el pedido: se escucha a la hora en que se habla.
         emb = _embeddings(p)
-        loadout = calcular_loadout(receptor, version.contenido, emb)
+        loadout = calcular_loadout(receptor, version.contenido, emb, bias=BiasCircadiano(reloj))
         # Pesos ANTES de escuchar: si una contradicción mueve algo (políticas de
         # aprendizaje, mejora 04), el autor lo ve sin ir a buscar el estado vivo.
         antes = {mid: e.peso for mid, e in p.leer_estado(cuerpo.receptor_id).items()}
@@ -661,7 +847,9 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
         blades = _blades(p)
         accion = AccionDeclarada(**cuerpo.model_dump())
         memetario = Memetario.cargar(accion.ser_id, p)
-        contexto = contexto_para(accion, memetario, _embeddings(p))
+        contexto = contexto_para(
+            accion, memetario, _embeddings(p), bias=bias_a_la_hora(p.leer_momento_mundo() or "")
+        )
         evaluacion = blades.evaluar(accion, contexto)
         return {"evaluacion": evaluacion.model_dump(), "contexto": contexto.model_dump()}
 
@@ -723,7 +911,87 @@ def crear_app(raiz_mundos, cliente_llm=None, encoder=None, rng=None) -> FastAPI:
             "stress": stress,
             "clock": clock.model_dump(),
             "pesos_movidos": pesos_movidos,
+            # Si la tirada llenó la barra, la página muestra la cicatriz sin ir a
+            # buscar nada (docs/DISENO_DESBORDE.md).
+            "desbordado": desbordado(
+                p.leer_estado_reglas(ser_id), blades.hojas[ser_id].stress_max
+            ),
         }
+
+    # ----- La vida ociosa (el latido, codex/vida.py): cero LLM -----
+
+    @app.post("/vida")
+    def vida_endpoint(cuerpo: CuerpoVida, mundo: str, p: Persistencia = Depends(dep_persistencia)):
+        """Vivir N días de rutina envolviendo `vivir()`: el endpoint es fino y no
+        agrega lógica de motor. El reloj del mundo NO se toca: los días vividos
+        son del ser; si el autor quiere que el tiempo pase para todos, avanza el
+        reloj como siempre. Los ticks calientes van a la cola de pendientes."""
+        if not NOMBRE_VALIDO.match(cuerpo.ser_id):
+            raise HTTPException(400, "El ser_id lleva solo letras, números, guiones y guión bajo.")
+        if cuerpo.dias < 1:
+            raise HTTPException(400, "Se vive para adelante: días positivos.")
+        try:
+            memetario = Memetario.cargar(cuerpo.ser_id, p)
+        except FileNotFoundError:
+            raise HTTPException(404, f"No existe el ser: {cuerpo.ser_id}")
+        rutina = cargar_rutina(p, cuerpo.ser_id)   # malformada → ValidationError → 400
+        if rutina is None:
+            raise HTTPException(
+                409, f"El ser {cuerpo.ser_id} no tiene rutina.json: sin rutina no late."
+            )
+        momento = p.leer_momento_mundo()
+        if momento is None:
+            raise HTTPException(409, "El mundo no tiene hora todavía: fijala antes de vivir.")
+
+        reloj = RelojSimple(datetime.fromisoformat(momento))
+        resumen = vivir(
+            cuerpo.dias, memetario, rutina, reloj, p, _embeddings(p),
+            random.Random(cuerpo.semilla),
+        )
+        # Los días de rutina son tiempo que el ser vivió de verdad, así que calman
+        # igual que los del reloj del mundo — aunque el reloj no se haya movido.
+        stress = descargar_stress(p, cuerpo.ser_id, cuerpo.dias)
+
+        # Bitácora: UNA entrada por día vivido (noventa ticks no inflan el JSONL).
+        for dia in resumen.dias:
+            calientes = sum(1 for t in dia.ticks if t.escalado)
+            bitacora.registrar(p.carpeta, {
+                "tipo": "vida",
+                "ser": cuerpo.ser_id,
+                "entrada": f"día {dia.fecha} ({len(dia.ticks)} ticks de rutina)",
+                "salida": "; ".join(
+                    f"{t.situacion_id} → {', '.join(t.movilizados) or 'nada'}"
+                    + (" [irrupción]" if t.irrupcion else "")
+                    + (" [caliente]" if t.escalado else "")
+                    for t in dia.ticks
+                ),
+                "terminos": {"calientes": calientes,
+                             "pesos_fin_de_dia": dia.pesos_fin_de_dia},
+            })
+
+        nuevos = pendientes.registrar(
+            cola_pendientes, mundo, [m.model_dump() for m in resumen.pendientes]
+        )
+        return {
+            "ser_id": cuerpo.ser_id,
+            "dias_vividos": len(resumen.dias),
+            "pesos_inicio": resumen.pesos_inicio,
+            "pesos_fin": resumen.pesos_fin,
+            "deltas": resumen.deltas,
+            "pendientes": nuevos,
+            "stress": stress,
+        }
+
+    @app.get("/vida/pendientes")
+    def listar_pendientes(mundo: str):
+        _carpeta_mundo(mundo)   # valida nombre y existencia
+        return pendientes.leer(cola_pendientes, mundo)
+
+    @app.post("/vida/pendientes/marcar")
+    def marcar_pendiente(cuerpo: CuerpoMarcarPendiente, mundo: str):
+        _carpeta_mundo(mundo)
+        # estado o id inválidos → ValueError → 400 legible (handler de arriba)
+        return pendientes.marcar(cola_pendientes, mundo, cuerpo.id, cuerpo.estado)
 
     @app.get("/bitacora")
     def leer_bitacora(mundo: str):

@@ -118,7 +118,9 @@ def test_exito_con_costo_con_dado_mas_alto_4_o_5():
     ctx = _contexto(CRISTAL_NEUTRO)
     r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
     assert r.categoria == CategoriaResultado.CON_COSTO
-    assert r.efectos == []
+    # El clock no se toca: solo la mala consecuencia lo avanza. (El costo SÍ carga
+    # la barra del ser; eso lo cubren los tests de carga de stress más abajo.)
+    assert [e for e in r.efectos if isinstance(e, AvanzarClock)] == []
 
 
 def test_mala_consecuencia_avanza_el_clock_de_amenaza():
@@ -127,14 +129,14 @@ def test_mala_consecuencia_avanza_el_clock_de_amenaza():
     r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
 
     assert r.categoria == CategoriaResultado.MALA_CONSECUENCIA
-    assert r.efectos == [AvanzarClock(clock_id="amenaza", segmentos=1)]
+    assert AvanzarClock(clock_id="amenaza", segmentos=1) in r.efectos
 
 
 def test_en_posicion_desesperada_la_mala_consecuencia_pega_doble():
     blades = _blades(dados=(1, 1))
     ctx = _contexto(CRISTAL_EN_CONTRA)
     r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
-    assert r.efectos == [AvanzarClock(clock_id="amenaza", segmentos=2)]
+    assert AvanzarClock(clock_id="amenaza", segmentos=2) in r.efectos
 
 
 def test_regla_del_cero_tira_dos_y_toma_el_menor():
@@ -182,6 +184,51 @@ def test_no_se_puede_empujar_sin_stress_disponible():
     ev = blades.evaluar(ACCION, ctx)
     with pytest.raises(ValueError):
         blades.tirar(ev, ctx, empuje=Empuje.DADO_EXTRA)
+
+
+# ----- La carga de stress: la barra mide lo que le PASA al ser -----
+
+def test_una_tirada_limpia_no_carga_stress():
+    """El éxito no deja marca: solo lo que salió mal pesa."""
+    blades = _blades(dados=(6, 6))
+    ctx = _contexto(CRISTAL_NEUTRO)
+
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+
+    assert r.categoria == CategoriaResultado.LIMPIO
+    assert [e for e in r.efectos if isinstance(e, PagarStress)] == []
+
+
+def test_una_tirada_con_costo_carga_un_punto():
+    blades = _blades(dados=(4, 4))
+    ctx = _contexto(CRISTAL_NEUTRO)
+
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+
+    assert r.categoria == CategoriaResultado.CON_COSTO
+    assert PagarStress(ser_id="pescador", cantidad=1) in r.efectos
+
+
+def test_una_mala_consecuencia_carga_dos_puntos():
+    blades = _blades(dados=(2, 3))
+    ctx = _contexto(CRISTAL_NEUTRO)
+
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx)
+
+    assert r.categoria == CategoriaResultado.MALA_CONSECUENCIA
+    assert PagarStress(ser_id="pescador", cantidad=2) in r.efectos
+
+
+def test_el_empuje_y_el_golpe_se_suman():
+    """Empujar cuesta 2 (lo que el AUTOR gasta) y el golpe cuesta 2 (lo que el SER
+    vive): una mala consecuencia en tirada empujada cobra las dos cosas."""
+    blades = _blades(dados=(2, 3, 1))
+    ctx = _contexto(CRISTAL_NEUTRO, stress=0.0)
+
+    r = blades.tirar(blades.evaluar(ACCION, ctx), ctx, empuje=Empuje.DADO_EXTRA)
+
+    assert r.categoria == CategoriaResultado.MALA_CONSECUENCIA
+    assert sum(e.cantidad for e in r.efectos if isinstance(e, PagarStress)) == 4
 
 
 def test_la_narracion_recibe_la_categoria_explicita():
