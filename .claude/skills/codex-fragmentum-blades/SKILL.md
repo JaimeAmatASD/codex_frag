@@ -7,6 +7,8 @@ description: Motor de drama de Codex Fragmentum, basado en Blades in the Dark ad
 
 Este skill se ocupa exclusivamente del motor de drama mecánico del proyecto. Si llegaste a este skill, James está trabajando en alguna de las mecánicas que producen drama narrativo confiable: tiradas, stress, vicios, clocks. Para el contexto general del proyecto, asumí que el skill maestro codex-fragmentum-arquitectura ya está cargado. Si no lo está y necesitás contexto general, pedile a James cargarlo.
 
+**Nota de revisión (julio 2026).** Lo ya implementado de este territorio: el Score mínimo (`codex/blades.py` — posición, efecto y dados a la vista antes de tirar, narración del resultado con LLM, jugable desde la zona Probar del Taller), y los clocks (`codex/clocks.py`). Desde el paso 0 de la vida ociosa, el Score deja huella en el ser: los memes relevantes de la escena quedan registrados como movilizados. Los momentos calientes que trae el latido se juegan como Score o transmisión — la cola de pendientes del Taller tiene botones directos. Stress/trauma, vicios y downtime siguen siendo diseño sin código; ante diferencias entre este skill y `codex/blades.py`, manda el código.
+
 ## Por qué Blades y por qué adaptado
 
 El motor cognitivo del Codex (memetario, refracción, propagación de información) puede producir un mundo que se siente vivo pero no necesariamente un mundo que se siente dramático. La simulación pura tiende a producir eventos sin tensión: pasan cosas, pero no se sienten como historia. La buena ficción requiere drama: decisiones que importan, consecuencias que duelen, resoluciones que cambian algo.

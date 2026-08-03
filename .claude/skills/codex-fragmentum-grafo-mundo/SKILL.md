@@ -7,6 +7,8 @@ description: Sistema de información del proyecto Codex Fragmentum, donde la inf
 
 Este skill se ocupa del sistema que modela cómo la información existe, se transmite y muta en el mundo del Codex. Si llegaste a este skill, James está trabajando en la pieza que vuelve concreta la promesa central del proyecto: la verdad muere con el testigo, los rumores se deforman en cada salto, lo que cada personaje sabe es función de su trayectoria personal de encuentros e información recibida. Para el contexto general, asumí que el skill maestro codex-fragmentum-arquitectura ya está cargado.
 
+**Nota de revisión (julio 2026).** El núcleo de este skill ya está implementado y los modelos de abajo son el pseudocódigo de diseño: los nombres reales son `Hecho` y `Version` (`codex/hechos.py`) y `GrafoMundo` (`codex/grafo_mundo.py`), un MultiDiGraph por mundo con nodos `hecho`/`version`/`ser` y aristas `deriva` (el árbol de mutación) y `conoce` (el conocimiento), con `registrar_version` como único punto de entrada para que árbol y conocimiento no se desfasen. La transmisión con mutación real (Gemini) corre desde el Taller. Ante diferencias con el pseudocódigo de abajo, manda el código. La propagación probabilística por ticks y la velocidad por geografía siguen siendo diseño sin código.
+
 ## Por qué este sistema importa estructuralmente
 
 Vale la pena empezar por la motivación porque sin ella las decisiones técnicas pueden parecer arbitrarias. La promesa central de Codex Fragmentum, la frase que vive como subtítulo informal del proyecto, es "donde la verdad muere con el testigo". Esa frase tiene peso operativo, no solo poético. Significa que la información en el mundo es física: ocupa lugar (vive en personajes específicos), tiene velocidad (tarda en propagarse), se deforma al moverse (cada salto la muta), y puede perderse si su único portador muere antes de transmitirla.
@@ -189,7 +191,7 @@ G.add_edge("NODO-marcos_v1", "NODO-lia_v2", relacion="transmitio_a", fecha="..."
 
 NetworkX en memoria es perfecto para el MVP. Cuando el grafo crezca a más de diez mil nodos, conviene considerar persistencia en SQLite con tablas dedicadas (una de nodos, una de aristas, índices apropiados) o migrar a Neo4j si el caso lo justifica. Pero esto es decisión para fases posteriores.
 
-La persistencia del grafo entre sesiones se hace con `nx.write_gpickle()` para snapshots completos y reconstrucción rápida, complementada con exportación a JSON Graph format para inspección humana cuando hace falta debuggear.
+La persistencia del grafo entre sesiones se hace en JSON node-link (`grafo.json` en la carpeta del mundo), legible y portable, con toda escritura pasando por la puerta única (`Persistencia.guardar_grafo`). Nada de pickle: `nx.write_gpickle` ya ni existe en las versiones actuales de NetworkX, y un snapshot binario rompería la portabilidad por carpeta.
 
 ## La integración con el motor cognitivo
 

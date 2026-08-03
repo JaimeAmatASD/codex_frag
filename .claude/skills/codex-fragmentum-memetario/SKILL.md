@@ -7,6 +7,8 @@ description: Motor cognitivo de los agentes vivos del proyecto Codex Fragmentum.
 
 Este skill se ocupa específicamente del motor cognitivo del proyecto: cómo están construidos los cuerpos cognitivos de los agentes vivos (PJ, NPCs principales, dioses), cómo se calcula qué piensan en cada momento, cómo cambian a lo largo del tiempo. Si llegaste a este skill, James está trabajando en el corazón del proyecto, en lo que vuelve singular a cada personaje. Para el contexto general, asumí que el skill maestro codex-fragmentum-arquitectura ya está cargado.
 
+**Nota de revisión (julio 2026).** Buena parte de lo que este skill describe como diseño ya está implementado en `codex/` (memetario.py, loadout.py, decaimiento.py, bias.py, vida.py entre otros), y las fórmulas de abajo son el pseudocódigo de diseño heredado de Fray Tomás: ante cualquier diferencia, manda el código real. Tres cambios de julio que este skill no anticipó: (1) las tres puertas del Taller (Score, transmisión, diálogo) dejan huella — `registrar_activaciones` distingue por columna `regimen` la vivencia autorada de la rutina y la interferencia; (2) el decaimiento lo dispara el tiempo del mundo: avanzar el reloj enfría a todos los seres (fijar la hora no — es teletransporte autoral, no tiempo vivido); (3) existe "el latido" (`codex/vida.py`, pendiente de veredicto): vida ordinaria sin LLM con `rutina.json` por ser, micro-refuerzo propio (`TASA_REFUERZO_RUTINA=0.02`, mucho menor que el de escena para no saturar), y las PF no laten. El SPECULUM también dejó de ser deuda: `codex/speculum.py`.
+
 ## Por qué esto es la pieza más distintiva del proyecto
 
 Vale la pena empezar por ahí porque condiciona todas las decisiones de diseño que vienen después. Codex Fragmentum se distingue de otros proyectos similares (AI Dungeon, simuladores narrativos, novelas interactivas) en que sus personajes no son chatbots con personalidad ni perfiles temáticos pasados al LLM. Son cuerpos cognitivos sintéticos con arquitectura propia, donde el LLM solamente ilustra desde lo que el cuerpo ya determinó.
@@ -80,7 +82,7 @@ peso_actual = peso_base * factor_decaimiento * factor_exito
 
 Las PF no decaen. Esto es decisión arquitectónica deliberada. Si las PF decayeran como los MO, la identidad del personaje sería volátil. Las PF cambian solamente por crisis biográfica explícita, que requiere acumulación documentada de evidencia que las cuestione.
 
-La aplicación del decaimiento corre como tarea programada, típicamente una vez por día del mundo (a las 6:00 del juego). Es operación barata, no requiere LLM, solo aritmética sobre los catálogos de memes de los agentes activos. Para el MVP donde hay pocos agentes activos, esto es trivial. Cuando el sistema escale a cientos de agentes principales, vale la pena considerar paralelizarlo o aplicarlo lazy (solo cuando un meme se va a usar, recalcular su peso).
+La aplicación del decaimiento la dispara el tiempo del mundo, no una tarea programada: avanzar el reloj (`/reloj/avanzar`) enfría a todos los seres — un día del mundo es un ciclo de decaimiento, fraccionario compone exacto — y cada día vivido por el latido cierra con su propio ciclo. Es operación barata, no requiere LLM, solo aritmética sobre los catálogos de memes de los agentes activos. Para el MVP donde hay pocos agentes activos, esto es trivial. Cuando el sistema escale a cientos de agentes principales, vale la pena considerar paralelizarlo o aplicarlo lazy (solo cuando un meme se va a usar, recalcular su peso).
 
 ## La inyección divina diferida
 
@@ -114,7 +116,7 @@ Cuando programes algo del memetario, asegurate de que la operación funcione par
 
 ## El reuso de Fray Tomás
 
-Una decisión central que conviene tener presente cuando programes este territorio: el motor cognitivo no se construye desde cero. Reusa el motor de Fray Tomás, otro proyecto de James que ya está corriendo en una Raspberry Pi 4. Específicamente, todo lo relativo a la estructura de datos del memetario, los embeddings con sentence-transformers all-MiniLM-L6-v2, el cálculo de loadout, el bias circadiano, el decaimiento, la evaluación de umbral de PF ya está implementado y probado en el código de Fray Tomás.
+Una decisión central que conviene tener presente cuando programes este territorio: el motor cognitivo no se construye desde cero. Reusa el motor de Fray Tomás, otro proyecto de James que ya está corriendo en una Raspberry Pi 4. Específicamente, todo lo relativo a la estructura de datos del memetario, los embeddings con all-MiniLM-L6-v2 (vía fastembed/ONNX, no sentence-transformers directo), el cálculo de loadout, el bias circadiano, el decaimiento, la evaluación de umbral de PF ya está implementado y probado en el código de Fray Tomás — y a esta altura, adaptado y funcionando en `codex/`.
 
 Antes de proponer reescritura de cualquier pieza cognitiva, conviene preguntarle a James si esa pieza ya existe en Fray Tomás. La respuesta probable es que sí, y entonces la tarea es adaptarla a múltiples agentes en lugar de uno solo, no programarla desde cero.
 

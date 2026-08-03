@@ -17,13 +17,17 @@ El motor mantiene el estado del mundo y el LLM nunca es la fuente de verdad: sol
 
 El subtítulo informal del proyecto, que captura su consigna estética central, es "donde la verdad muere con el testigo". Esta frase tiene peso operativo, no solo poético. Cuando muere un ser, los secretos que sólo él conocía pueden perderse para siempre. La fragilidad de la información es la materia prima narrativa del proyecto.
 
+## Dónde está el proyecto hoy (revisión julio 2026)
+
+Este skill se escribió en fase de diseño; desde entonces se construyó de verdad. Lo que ya corre, verificado contra el código: el motor cognitivo multi-ser (paso 1 del MVP), la mutación del rumor con grafo de información (transmisión real con Gemini), el Taller (dashboard autoral en FastAPI — nació PRESCINDIBLE y el uso lo volvió central), una serie de cinco mejoras cerradas o casi (tensión narrativa, constructor de seres, singularidades, experimento A/B, SPECULUM), la zona de Diálogo directo, y la vida ociosa en curso (decaimiento por tiempo del mundo commiteado; "el latido" construido, pendiente de veredicto). El estado fino por sesión vive en la auto-memoria de Claude y en la bitácora de cada mundo; ante contradicción entre este skill y el código o los ADRs, mandan el código y los ADRs.
+
 ## La visión de fondo (Fase 0, junio 2026)
 
 El problema perenne que Codex ataca es el anhelo de Pigmalión vuelto herramienta: crear algo vivo que después tenga vida propia. Tiene dos caras que son una. Para quien habita un mundo de Codex, la humildad de estar en algo que existe más allá de él (el árbol que cae sin testigo igual mata el pasto y deja un claro de luz para otros árboles). Para quien crea, poder ser jardinero de una obra que crece casi sola.
 
 De ahí el requisito de las DOS VELOCIDADES DE CREACIÓN, ambas de primera clase sobre el mismo sustrato: el flujo del jardinero (plantar fragmentos narrativos con voz propia y que el sistema derive estructura de ellos) y el flujo del arquitecto (definir estructura directamente). Las dos vías editan las mismas entidades y deben converger en la misma representación interna. El flujo del jardinero está registrado como requisito pero aún sin diseño técnico; no proponer construirlo hasta después del MVP, pero no tomar decisiones que lo imposibiliten.
 
-El NÚCLEO IRRENUNCIABLE del engine es la estructura del alma heredada de Fray Tomás, tres órganos más una propiedad del mundo: el memetario (percepción refractada por cristal propio), la autoobservación (el ser que mira su propia trayectoria — el SPECULUM, con prototipo real en Fray Tomás pero adaptación a Codex todavía como deuda de diseño nombrada), la plasticidad (los pesos cambian, el carácter se forma), y la autonomía del mundo (las cosas pasan y resuenan sin la mirada del jugador). Sin cualquiera de esas cuatro cosas, no es Codex.
+El NÚCLEO IRRENUNCIABLE del engine es la estructura del alma heredada de Fray Tomás, tres órganos más una propiedad del mundo: el memetario (percepción refractada por cristal propio), la autoobservación (el ser que mira su propia trayectoria — el SPECULUM, ya adaptado a Codex: `codex/speculum.py`, mejora 05, con el botón «Que se mire» en el Taller), la plasticidad (los pesos cambian, el carácter se forma), y la autonomía del mundo (las cosas pasan y resuenan sin la mirada del jugador). Sin cualquiera de esas cuatro cosas, no es Codex.
 
 Alrededor del núcleo hay tres categorías que ordenan cualquier decisión de esfuerzo. Lo GRADUABLE: la complejidad de los seres, que viven en niveles desde alma completa hasta etiqueta funcional, con interfaz uniforme, y pueden ascender o descender según la historia (ADR-006). Lo INTERCAMBIABLE: el sistema de reglas de juego, donde Blades es una opción enchufable, no la esencia (ADR-002). Lo PRESCINDIBLE: dashboard, interfaz linda, multitudes, time-jump elaborado, multiplicidad de dioses — emergen con el uso o se descartan sin dolor.
 
@@ -167,19 +171,19 @@ La trampa de esperar a la AGI es pensar que si esperás un año, los LLMs serán
 
 ## El stack tecnológico
 
-Python 3.11 o superior es el lenguaje principal y no es negociable a menos que aparezca una razón fuerte. Las librerías centrales son networkx para el grafo del mundo, fastembed con ONNX para embeddings (modelo all-MiniLM-L6-v2 local en CPU; es lo que Fray Tomás usa en código real, más liviano que sentence-transformers directo, y se hereda), pydantic para validación de respuestas estructuradas del LLM, sqlite3 para persistencia, streamlit para UI web local en fase 2.
+Python 3.11 o superior es el lenguaje principal y no es negociable a menos que aparezca una razón fuerte. Las librerías centrales son networkx para el grafo del mundo, fastembed con ONNX para embeddings (modelo all-MiniLM-L6-v2 local en CPU; es lo que Fray Tomás usa en código real, más liviano que sentence-transformers directo, y se hereda), pydantic para validación de respuestas estructuradas del LLM, sqlite3 para persistencia, y FastAPI + uvicorn para el Taller (la UI web local ya construida; el plan original decía streamlit y la realidad eligió FastAPI con HTML vanilla).
 
 El cliente de LLM se abstrae detrás de una interfaz propia con implementaciones para Gemini, Anthropic y un cliente mock crítico para tests. Sin el mock, no se pueden correr tests sin gastar tokens, y eso vuelve insostenible la práctica de testing.
 
-La UI evoluciona en fases. Terminal en fase 1 (jugar solo desde la consola). Streamlit local en fase 2 (compartir con amigos). Web desplegada en fase 3 (público nicho). No conviene comprometerse con plataformas más pesadas (Electron, móvil) sin razón fuerte. La fase final se decide cuando se llega, no al principio.
+La UI evoluciona en fases. La fase actual es el Taller: dashboard autoral local (FastAPI, `taller/servidor.py`, puerto 8765) para pulir el mundo — no es todavía la UI de juego. Web desplegada queda para la fase de público nicho. No conviene comprometerse con plataformas más pesadas (Electron, móvil) sin razón fuerte. La fase final se decide cuando se llega, no al principio.
 
-Todo se persiste en archivos. JSON legible por humanos para datos del mundo, SQLite para queries rápidas y logs, pickle de NetworkX para snapshots del grafo. El proyecto entero se mueve copiando carpeta. Esto es portabilidad por diseño.
+Todo se persiste en archivos. JSON legible por humanos para datos del mundo, SQLite para queries rápidas y logs, y el grafo de NetworkX en JSON node-link (`grafo.json`, nada de pickle: legible y portable). El proyecto entero se mueve copiando carpeta. Esto es portabilidad por diseño.
 
 ## El plan de MVP
 
 El MVP se llama "Una noche en la taberna" y tiene un alcance acotado a propósito. Un solo lugar (la taberna de Cala Norte). Cinco NPCs. Un hecho semilla (un avistamiento del kraken). Tres clocks visibles. Un PJ jugable (Marcos, pescador). Un solo día narrativo jugable de principio a fin.
 
-Lo que NO está en el MVP, y conviene resistir agregar antes de tiempo: múltiples lugares interconectados con grilla jerárquica activa, múltiples dioses interviniendo, sistema completo de muerte y cambio de PJ, SPECULUM y crisis biográficas formales, multitudes y NPCs tibios, templates de UI sofisticados.
+Lo que NO está en el MVP, y conviene resistir agregar antes de tiempo: múltiples lugares interconectados con grilla jerárquica activa, múltiples dioses interviniendo, sistema completo de muerte y cambio de PJ, crisis biográficas formales, multitudes y NPCs tibios, templates de UI sofisticados. (El SPECULUM estaba en esta lista y el uso real lo adelantó: ya existe como mejora 05. Las crisis biográficas siguen diferidas.)
 
 El MVP es exitoso si James puede sentarse una noche y jugar treinta a sesenta minutos saliendo con la sensación de haber estado en algún lado, si una persona externa puede entender qué pasa sin explicación previa, y si la mutación del rumor del kraken entre dos NPCs es visible y satisface la promesa conceptual del proyecto.
 
@@ -198,21 +202,17 @@ Cuando produzcas código, usá Pydantic para los esquemas de datos, abstraé el 
 
 ## Documentación de referencia y regla de precedencia
 
-El proyecto vive en el repositorio git codex_frag (github, JaimeAmatASD/codex_frag), que es la memoria única: código en codex/, tests en tests/, mundos en mundos/, documentación de diseño en docs/, fuentes de los skills en skills/. Si algo importante no está en el repo, pedile a James versionarlo.
+El proyecto vive en el repositorio git codex_frag (github, JaimeAmatASD/codex_frag), que es la memoria única: código en codex/, tests en tests/, mundos en mundos/, documentación de diseño en docs/, los skills en .claude/skills/. Si algo importante no está en el repo, pedile a James versionarlo.
 
-REGLA DE PRECEDENCIA cuando dos documentos se contradicen: mandan los seis ADRs (docs/adr/) y la visión de Fase 0 (docs/VISION_FASE0.md); después este skill y sus hermanos; después los documentos grandes de la primera etapa (CONCEPTUAL, TECNICO, EVALUACION_CRITICA), que quedan como referencia histórica y de profundidad conceptual — su filosofía sigue válida pero detalles técnicos puntuales quedaron superados (por ejemplo, mencionan sentence-transformers donde el código real usa fastembed, y presentan a Blades como parte integral cuando el ADR-002 lo hizo enchufable).
+REGLA DE PRECEDENCIA cuando dos documentos se contradicen: mandan los siete ADRs (docs/adr/) y la visión de Fase 0 (docs/VISION_FASE0.md); después este skill y sus hermanos; después los documentos grandes de la primera etapa (CONCEPTUAL, TECNICO, EVALUACION_CRITICA), que quedan como referencia histórica y de profundidad conceptual — su filosofía sigue válida pero detalles técnicos puntuales quedaron superados (por ejemplo, mencionan sentence-transformers donde el código real usa fastembed, y presentan a Blades como parte integral cuando el ADR-002 lo hizo enchufable).
 
-Documentos clave en docs/: los seis ADRs (decisiones irreversibles con sus consecuencias, incluidas las negativas), VISION_FASE0.md (identidad de engine, núcleo irrenunciable, cuatro categorías), CORPUS_DISENO.md (el sistema de corpus completo), VERIFICACION_CODIGO_FRAY_TOMAS.md (qué existe realmente en el prototipo, con rutas), y los prompts de arranque por fase (PROMPT_PASO_N.md) que definen el alcance de cada paso del MVP.
+Documentos clave en docs/: los siete ADRs (decisiones irreversibles con sus consecuencias, incluidas las negativas), VISION_FASE0.md (identidad de engine, núcleo irrenunciable, cuatro categorías), CORPUS_DISENO.md (el sistema de corpus completo), VERIFICACION_CODIGO_FRAY_TOMAS.md (qué existe realmente en el prototipo, con rutas), y los prompts de arranque por fase (PROMPT_PASO_N.md) que definen el alcance de cada paso del MVP.
 
 ## Skills hermanos especializados
 
 A medida que el proyecto crece, James va armando skills especializados para cada dominio. Ninguno reemplaza a este maestro: todos lo presuponen como contexto raíz.
 
-codex-fragmentum-blades existe (o existirá) y se ocupa del motor de drama. Cargalo cuando el trabajo sea sobre las tres fases de juego, resolución de tiradas, posición y efecto, stress y trauma, vicios, clocks de progreso, o adaptación específica de Blades a Codex.
-
-codex-fragmentum-llm-prompts existe (o existirá) y se ocupa de la integración con LLM. Cargalo cuando el trabajo sea sobre estrategia de tiers de modelos, templates de prompts, validación con Pydantic de respuestas estructuradas, manejo de errores y retries, caché, dirección estética del output narrativo.
-
-Otros skills están planeados pero aún no armados. codex-fragmentum-memetario para el motor cognitivo en profundidad. codex-fragmentum-grafo-mundo para los hechos, árboles de mutación, propagación. codex-fragmentum-cartografia para la grilla espacial, lugares, secretos sembrados. codex-fragmentum-estetica para la voz narrativa y dirección literaria (este último James decidió postergar hasta tener experiencia real con el output del LLM para saber qué prosa quiere).
+Los cinco hermanos existen, en .claude/skills/. codex-fragmentum-blades se ocupa del motor de drama: cargalo cuando el trabajo sea sobre las tres fases de juego, resolución de tiradas, posición y efecto, stress y trauma, vicios, clocks de progreso, o adaptación específica de Blades a Codex. codex-fragmentum-llm-prompts se ocupa de la integración con LLM: tiers de modelos, templates de prompts, validación con Pydantic, manejo de errores y retries, caché. codex-fragmentum-memetario cubre el motor cognitivo en profundidad. codex-fragmentum-grafo-mundo cubre los hechos, árboles de mutación, propagación. codex-fragmentum-cartografia cubre la grilla espacial, lugares, secretos sembrados (todavía puro diseño: no hay código espacial). Falta solo codex-fragmentum-estetica, para la voz narrativa y dirección literaria, que James decidió postergar hasta tener experiencia real con el output del LLM para saber qué prosa quiere.
 
 Si James está trabajando en un dominio que tiene skill específico y no está cargado, sugerile que lo cargue antes de continuar. Si el skill aún no existe, marcalo y procedé con lo que se sabe del documento técnico, avisándole que estás trabajando con menos contexto del óptimo.
 

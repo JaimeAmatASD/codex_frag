@@ -7,6 +7,8 @@ description: Sistema espacial del proyecto Codex Fragmentum. Cubre la grilla jer
 
 Este skill se ocupa del sistema que modela el espacio del Codex y todo lo que vive en él más allá de los agentes vivos. Si llegaste a este skill, James está trabajando en cómo se estructura geográficamente el mundo, en cómo los lugares afectan a quienes los habitan, en qué cosas hay sembradas para descubrir, en los objetos cargados de significado que pueblan el mundo. Para el contexto general, asumí que el skill maestro codex-fragmentum-arquitectura ya está cargado.
 
+**Nota de revisión (julio 2026).** Este territorio sigue siendo puro diseño: no hay código espacial en `codex/` todavía (ni celdas, ni memetario de lugares, ni secretos sembrados). Lo más cercano que existe son las singularidades (`codex/singularidades.py`, eventos sembrados que el momento del mundo dispara) y la rutina del latido (`rutina.json`, cuyas plantillas nombran lugares como texto, sin estructura). Cuando este sistema se construya, esas dos piezas son candidatas naturales a integrarse con él.
+
 Una nota importante de entrada. Este skill tiene estructura modular con archivos de referencia separados, porque cubre cuatro subdominios que tocan código distinto y conviene poder cargarlos por separado. El SKILL.md principal cubre los conceptos transversales y sirve como índice. Cuando estés trabajando en un subdominio específico, cargá su archivo de referencia correspondiente.
 
 ## Por qué los lugares no son escenografía
