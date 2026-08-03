@@ -13,8 +13,10 @@ Los valores de la tabla son un punto de partida razonable, pensados para calibra
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from .modelos import TipoMeme
-from .reloj import RelojDelMundo
+from .reloj import RelojDelMundo, RelojSimple
 
 HORA_INICIO_DIA = 6
 HORA_FIN_DIA = 18
@@ -46,3 +48,14 @@ class BiasCircadiano:
 
     def __call__(self, tipo: TipoMeme) -> float:
         return self.tabla[self.franja()].get(tipo, 1.0)
+
+
+def bias_a_la_hora(momento: str) -> BiasCircadiano | None:
+    """El bias de una hora del mundo en ISO, listo para `calcular_loadout`.
+
+    Devuelve None si nadie fijó la hora: sin hora no hay franja, y el cristal
+    queda neutral (que es como venía funcionando el Taller entero hasta que este
+    bias se enchufó en sus puertas)."""
+    if not momento:
+        return None
+    return BiasCircadiano(RelojSimple(datetime.fromisoformat(momento)))

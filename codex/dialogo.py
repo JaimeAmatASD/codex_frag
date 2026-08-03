@@ -6,9 +6,9 @@ libre -una escena narrada, una pregunta, una línea de otro personaje- activa
 el cristal del receptor tal como está AHORA, y el LLM responde en su voz.
 
 No crea Hecho ni Version (el grafo no se entera de una charla), pero la charla
-ES vida del ser: los memes que resuenan con ella se registran como movilizados
-y el uso los refuerza (regla 4), igual que en la transmisión y el Score. Sin
-esto el ser conversaba sin que le pasara nada -el problema de la vida ociosa.
+ES vida del ser: los memes del loadout más afines a ella se registran como
+movilizados y el uso los refuerza (regla 4), igual que en la transmisión y el
+Score. Sin esto el ser conversaba sin que le pasara nada -la vida ociosa.
 Tocar un peso a mano sigue siendo el modo editar del Taller, aparte de esto.
 
 El prompt vive en templates/dialogo.txt, mismo mecanismo que mutación y Score.
@@ -20,6 +20,7 @@ import logging
 from pathlib import Path
 from string import Template
 
+from .bias import bias_a_la_hora
 from .decaimiento import reforzar_movilizados
 from .embeddings import Embeddings
 from .llm import ClienteLLM, ErrorLLM
@@ -34,10 +35,15 @@ TEMPLATE_DIALOGO = Path(__file__).parent.parent / "templates" / "dialogo.txt"
 # En el diálogo la grieta debe notarse en cómo responde, no en cómo entiende
 # (mutación) ni en cómo actúa bajo riesgo (Score): es su propio $donde.
 DONDE_TENSION = "cómo responde"
-# Un meme del loadout se considera USADO en la charla si su afinidad con ella
-# llega acá. Mismo valor que UMBRAL_MEME_RELEVANTE de Blades, declarado aparte:
-# el núcleo no importa del enchufe (ADR-002). Se tunea con juego real.
-UMBRAL_RESONANCIA = 0.75
+# Cuántos memes del loadout se cuentan como USADOS en cada turno: los más
+# afines a la charla. Sin piso absoluto a propósito. Antes había un umbral de
+# 0.75 (copiado de Blades, donde se compara contra una escena corta) y nunca se
+# cruzaba: la charla acumulada mide miles de caracteres, su vector promedia
+# muchos temas y la afinidad de cualquier meme puntual se diluye. Medido en el
+# mundo `prueba` el 2026-07-30: el meme más afín del pescador llegó a 0.606 en
+# una charla sobre su propio tema, así que quince charlas no dejaron huella.
+# Si alguien te habla, algo de tu cristal se activa siempre.
+MEMES_MOVILIZADOS = 2
 
 
 def _historial_legible(historial: list[dict], ser_id: str) -> str:
@@ -76,13 +82,13 @@ def responder_dialogo(
     Devuelve su respuesta y el loadout usado (memes activos + tensiones, para
     mostrar el cristal reaccionando sin necesidad de que el LLM las reporte).
 
-    La charla deja huella (regla 4): los memes del loadout afines a ella
-    (>= UMBRAL_RESONANCIA) se registran como movilizados y el uso los refuerza.
+    La charla deja huella (regla 4): los `MEMES_MOVILIZADOS` del loadout más
+    afines a ella se registran como movilizados y el uso los refuerza.
     `momento` es la hora del MUNDO en ISO (vacía si nadie la fijó). Si el LLM
     falla por infraestructura, degrada con un aviso visible en vez de silencio
     (regla 3) y NO registra nada: la charla no llegó a ocurrir."""
     situacion = _historial_legible(historial, memetario.ser.ser_id)
-    loadout = calcular_loadout(memetario, situacion, embeddings)
+    loadout = calcular_loadout(memetario, situacion, embeddings, bias=bias_a_la_hora(momento))
     prompt = armar_prompt(memetario.ser.ser_id, historial, loadout)
     try:
         respuesta = cliente.responder(prompt)
@@ -94,8 +100,11 @@ def responder_dialogo(
         return "(no responde: se cortó la comunicación con el modelo)", loadout
 
     resonantes = [
-        m.id for m in loadout.seleccionados
-        if embeddings.similitud(m.texto, situacion) >= UMBRAL_RESONANCIA
+        m.id for m in sorted(
+            loadout.seleccionados,
+            key=lambda m: embeddings.similitud(m.texto, situacion),
+            reverse=True,
+        )[:MEMES_MOVILIZADOS]
     ]
     memetario.persistencia.registrar_activaciones(
         ser_id=memetario.ser.ser_id,

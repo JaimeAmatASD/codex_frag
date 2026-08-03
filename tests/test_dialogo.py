@@ -115,6 +115,49 @@ def test_error_de_infraestructura_degrada_con_aviso_y_sin_huella(tmp_path, caplo
     assert all(e.veces_movilizado == 0 for e in estado.values())
 
 
+def test_una_charla_larga_moviliza_los_mas_afines_aunque_ninguno_sea_muy_afin(tmp_path):
+    """El bug del 2026-07-30: una charla larga diluye la afinidad de todo meme
+    (el vector de 8.000 caracteres promedia muchos temas), así que un umbral
+    absoluto alto nunca se cruza y la charla no deja huella. Medido en el mundo
+    `prueba`: el meme más afín del pescador llegó a 0.606 sobre un umbral de
+    0.75, en una charla que hablaba justamente de su tema. La charla es vida:
+    siempre se moviliza lo más afín del loadout, sin piso absoluto."""
+    ser = Ser(
+        ser_id="el_que_no_muere",
+        mana_max=90,
+        memes=[
+            Meme(id="cercano", tipo="operativo", texto="meme cercano", peso_inicial=5.0, costo=20),
+            Meme(id="medio", tipo="operativo", texto="meme medio", peso_inicial=5.0, costo=20),
+            Meme(id="lejano", tipo="operativo", texto="meme lejano", peso_inicial=5.0, costo=20),
+        ],
+    )
+    # Encoder por ángulo: ninguna afinidad con la charla llega a 0.75, pero hay
+    # un orden claro (cercano 0.71 > medio 0.50 > lejano 0.26).
+    angulos = {"meme cercano": 45.0, "meme medio": 60.0, "meme lejano": 75.0}
+
+    def encoder(textos):
+        vs = []
+        for t in textos:
+            g = np.radians(angulos.get(t, 0.0))
+            vs.append(np.asarray([np.cos(g), np.sin(g)], dtype=np.float32))
+        return vs
+
+    p = Persistencia(tmp_path / "mundo")
+    memetario = Memetario(ser, p)
+    emb = Embeddings(p, encoder=encoder)
+    cliente = MockClient(respuesta_por_defecto="te escucho.")
+
+    responder_dialogo(
+        memetario, [{"quien": "vos", "texto": "una charla larga sobre muchas cosas"}],
+        cliente, emb, momento="1850-03-01T09:00:00",
+    )
+
+    estado = p.leer_estado("el_que_no_muere")
+    assert estado["cercano"].veces_movilizado == 1
+    assert estado["medio"].veces_movilizado == 1
+    assert estado["lejano"].veces_movilizado == 0   # el menos afín queda afuera
+
+
 def test_sin_historial_previo_lo_anota_como_lo_primero_que_oye(tmp_path):
     _, memetario, emb = _preparar(tmp_path)
     loadout = calcular_loadout(memetario, "hola", emb)
