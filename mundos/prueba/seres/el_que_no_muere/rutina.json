@@ -1,0 +1,52 @@
+{
+  "plantillas": [
+    {
+      "id": "despertar",
+      "texto": "Despierta con el alba en su casa de la costa y repasa el día de ayer antes de levantarse, ordenando qué guardar y qué dejar ir.",
+      "franja": "mañana",
+      "peso": 1.0
+    },
+    {
+      "id": "desayuno",
+      "texto": "Desayuna pan duro y pescado seco mirando el mar desde su puerta, atento al humor del agua.",
+      "franja": "mañana",
+      "peso": 1.0
+    },
+    {
+      "id": "oficio",
+      "texto": "Trabaja la huerta y los cercos de sus tierras, como cada mañana desde hace más tiempo del que puede recordar.",
+      "franja": "mañana",
+      "peso": 1.0
+    },
+    {
+      "id": "mercado",
+      "texto": "Camina hasta el mercado del pueblo a cambiar verdura por harina, saludando a los que conoce de siempre.",
+      "franja": "tarde",
+      "peso": 1.0
+    },
+    {
+      "id": "conversacion",
+      "texto": "Conversa trivialidades con un pescador conocido sobre el tiempo, las mareas y lo que se dice en el pueblo.",
+      "franja": "tarde",
+      "peso": 1.0
+    },
+    {
+      "id": "repaso_nocturno",
+      "texto": "Al final del día, junto al fuego, repasa lo vivido y decide qué merece quedar escrito en la memoria y qué se borra.",
+      "franja": "noche",
+      "peso": 1.0
+    },
+    {
+      "id": "hueco_en_la_memoria",
+      "texto": "Descubre un hueco donde ayer había un recuerdo: busca el nombre de alguien conocido y encuentra un vacío en su lugar.",
+      "franja": "cualquiera",
+      "peso": 0.5
+    },
+    {
+      "id": "anotaciones_ajenas",
+      "texto": "Revisa sus anotaciones viejas para confirmar algo que ya no recuerda: la letra es suya, pero el hecho le resulta ajeno.",
+      "franja": "noche",
+      "peso": 0.5
+    }
+  ]
+}

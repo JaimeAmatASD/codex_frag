@@ -59,6 +59,10 @@ class Persistencia:
                 );
 
                 -- Log de activaciones. Regla 4: separa "estuvo en el loadout" de "se usó".
+                -- `regimen` distingue la calidad de la señal: 'vivencia' (narrada,
+                -- plena), 'rutina' (el latido de la vida ordinaria, señal débil) o
+                -- 'interferencia' (el meme no convocado que irrumpió). La tabla no
+                -- puede mentir sobre qué clase de experiencia fue cada fila.
                 CREATE TABLE IF NOT EXISTS activaciones (
                     id           INTEGER PRIMARY KEY AUTOINCREMENT,
                     ser_id       TEXT NOT NULL,
@@ -67,7 +71,8 @@ class Persistencia:
                     situacion    TEXT,
                     en_loadout   INTEGER NOT NULL,
                     movilizado   INTEGER NOT NULL,
-                    co_activados TEXT
+                    co_activados TEXT,
+                    regimen      TEXT NOT NULL DEFAULT 'vivencia'
                 );
 
                 -- Caché de vectores: reusa cálculos de embeddings dentro del mundo.
@@ -110,6 +115,18 @@ class Persistencia:
                 );
                 """
             )
+        # Migración: los estado.db anteriores al latido no tienen `regimen`.
+        # Se agrega acá y las filas viejas quedan como 'vivencia' (que es lo
+        # que eran: toda activación previa al latido fue narrada).
+        columnas = {
+            f["name"] for f in self._conn.execute("PRAGMA table_info(activaciones)")
+        }
+        if "regimen" not in columnas:
+            with self._conn:
+                self._conn.execute(
+                    "ALTER TABLE activaciones "
+                    "ADD COLUMN regimen TEXT NOT NULL DEFAULT 'vivencia'"
+                )
 
     # ----- Definiciones de seres (JSON, solo lectura) -----
 
@@ -183,6 +200,7 @@ class Persistencia:
         situacion: str,
         loadout_ids: list[str],
         movilizados_ids: list[str],
+        regimen: str = "vivencia",
     ) -> None:
         """Registra un pensamiento: qué memes entraron al loadout y cuáles se usaron
         de verdad. La `ultima_activacion` y el contador de movilizados solo cuentan
@@ -201,9 +219,10 @@ class Persistencia:
                 fue_movilizado = 1 if meme_id in movilizados else 0
                 self._conn.execute(
                     "INSERT INTO activaciones "
-                    "(ser_id, meme_id, momento, situacion, en_loadout, movilizado, co_activados) "
-                    "VALUES (?, ?, ?, ?, 1, ?, ?)",
-                    (ser_id, meme_id, momento, situacion, fue_movilizado, json.dumps(co_activados)),
+                    "(ser_id, meme_id, momento, situacion, en_loadout, movilizado, "
+                    "co_activados, regimen) VALUES (?, ?, ?, ?, 1, ?, ?, ?)",
+                    (ser_id, meme_id, momento, situacion, fue_movilizado,
+                     json.dumps(co_activados), regimen),
                 )
                 self._conn.execute(
                     "UPDATE memes_estado SET veces_en_loadout = veces_en_loadout + 1 "
@@ -249,6 +268,16 @@ class Persistencia:
         se entrega cruda porque la valida el sistema de reglas con su propio modelo.
         None si no existe: un ser sin hoja no participa de Scores."""
         ruta = self.carpeta_seres / ser_id / "hoja_reglas.json"
+        if not ruta.exists():
+            return None
+        return json.loads(ruta.read_text(encoding="utf-8"))
+
+    def cargar_rutina(self, ser_id: str) -> dict | None:
+        """La rutina de vida ordinaria del ser, desde `seres/<ser_id>/rutina.json`.
+        Es semilla del latido (vida.py) y vive junto al ser (ADR-007); se entrega
+        cruda porque la valida el latido con su propio modelo. None si no existe:
+        un ser sin rutina no late."""
+        ruta = self.carpeta_seres / ser_id / "rutina.json"
         if not ruta.exists():
             return None
         return json.loads(ruta.read_text(encoding="utf-8"))

@@ -82,6 +82,62 @@ def test_registrar_distingue_loadout_de_movilizado(tmp_path):
     assert estado["presagio"].ultima_activacion == "2026-06-13T20:00:00"
 
 
+def test_migracion_regimen_en_estado_db_viejo(tmp_path):
+    """Un estado.db anterior al latido (sin la columna `regimen`) abre sin drama:
+    gana la columna y sus filas viejas leen 'vivencia', que es lo que eran."""
+    import sqlite3
+
+    carpeta = tmp_path / "mundo"
+    carpeta.mkdir()
+    # Un estado.db con el esquema VIEJO de activaciones (pre-latido) y una fila jugada.
+    conn = sqlite3.connect(carpeta / "estado.db")
+    conn.executescript(
+        """
+        CREATE TABLE activaciones (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            ser_id       TEXT NOT NULL,
+            meme_id      TEXT NOT NULL,
+            momento      TEXT NOT NULL,
+            situacion    TEXT,
+            en_loadout   INTEGER NOT NULL,
+            movilizado   INTEGER NOT NULL,
+            co_activados TEXT
+        );
+        INSERT INTO activaciones (ser_id, meme_id, momento, situacion, en_loadout, movilizado)
+        VALUES ('pescador', 'presagio', '2026-06-13T20:00:00', 'avistaje raro', 1, 1);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    p = Persistencia(carpeta)
+    filas = p._conn.execute("SELECT meme_id, regimen FROM activaciones").fetchall()
+    assert [(f["meme_id"], f["regimen"]) for f in filas] == [("presagio", "vivencia")]
+
+
+def test_registrar_con_regimen(tmp_path):
+    """El régimen de cada activación queda en su fila; el default sigue siendo
+    'vivencia' (ningún llamador existente cambia)."""
+    p = _mundo(tmp_path)
+    p.sembrar_ser(Ser(**SER_EJEMPLO))
+
+    p.registrar_activaciones(
+        "pescador", "2026-06-13T08:00:00", "el desayuno",
+        loadout_ids=["presagio"], movilizados_ids=["presagio"], regimen="rutina",
+    )
+    p.registrar_activaciones(
+        "pescador", "2026-06-13T20:00:00", "avistaje raro",
+        loadout_ids=["presagio"], movilizados_ids=["presagio"],
+    )
+
+    filas = p._conn.execute(
+        "SELECT situacion, regimen FROM activaciones ORDER BY id"
+    ).fetchall()
+    assert [(f["situacion"], f["regimen"]) for f in filas] == [
+        ("el desayuno", "rutina"), ("avistaje raro", "vivencia"),
+    ]
+
+
 def test_actualizar_pesos(tmp_path):
     p = _mundo(tmp_path)
     p.sembrar_ser(Ser(**SER_EJEMPLO))
