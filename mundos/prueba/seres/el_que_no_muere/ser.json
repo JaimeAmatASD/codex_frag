@@ -10,14 +10,13 @@
       "costo": 20,
       "conexiones": [],
       "tensiones": [
-        "conosco esta tierra",
-        "es mi cuerpo"
+        "conosco_esta_tierra"
       ],
       "funcion": "identitario",
       "aprendizaje": "normal"
     },
     {
-      "id": "conosco esta tierra, es mi cuerpo",
+      "id": "conosco_esta_tierra",
       "tipo": "operativo",
       "texto": "conosco cada rincon de mis tierras, sus tiempos y sus humores",
       "peso_inicial": 3.0,
@@ -61,7 +60,7 @@
       "aprendizaje": "normal"
     },
     {
-      "id": "El hombre es bueno,, pero si se lo vigila es mejor",
+      "id": "el_hombre_vigilado",
       "tipo": "experimental",
       "texto": "El hombre es bueno, pero si se lo vigila es mejor",
       "peso_inicial": 5.0,
@@ -75,6 +74,17 @@
       "id": "la_vigilancia_como_escudo",
       "tipo": "experimental",
       "texto": "Uso la vigilancia sobre los hombres como un sustituto para llenar el vacío de la memoria que voy borrando.",
+      "peso_inicial": 2.0,
+      "costo": 10,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "fe_inerte",
+      "tipo": "experimental",
+      "texto": "Cargo con verdades sagradas y absolutas que jamás pongo en práctica al juzgar el mundo.",
       "peso_inicial": 2.0,
       "costo": 10,
       "conexiones": [],

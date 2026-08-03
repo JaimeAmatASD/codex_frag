@@ -45,6 +45,41 @@
       "tensiones": [],
       "funcion": "emocional",
       "aprendizaje": "se_radicaliza"
+    },
+    {
+      "id": "racionalizar_espanto",
+      "tipo": "experimental",
+      "texto": "Tiendo a traducir todo relato de horror arcano en un vulgar delito o negocio costero.",
+      "peso_inicial": 2.0,
+      "costo": 10,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "sesgo_delito_costero",
+      "tipo": "experimental",
+      "texto": "Cualquier historia de monstruos o rituales marinos esconde un negocio clandestino de contrabando.",
+      "peso_inicial": 2.0,
+      "costo": 10,
+      "conexiones": [],
+      "tensiones": [],
+      "funcion": null,
+      "aprendizaje": "normal"
+    },
+    {
+      "id": "PF-los-dioses-existen",
+      "tipo": "fundacional",
+      "texto": "Los dioses existen y son terribles",
+      "peso_inicial": 16.0,
+      "costo": 20,
+      "conexiones": [
+        "PF-todo-precio"
+      ],
+      "tensiones": [],
+      "funcion": "identitario",
+      "aprendizaje": "se_radicaliza"
     }
   ],
   "origen": "prueba"

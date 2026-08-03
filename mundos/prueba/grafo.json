@@ -266,6 +266,39 @@
       "momento": "1850-03-01T09:00:00",
       "distancia_raiz": 0.546209454536438,
       "id": "v-9b0e83877c6b"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "el_hombre_pez",
+      "contenido": "Bajo la sublime tiniebla de la primera luna sangrienta, en un risco elevado y desolado sobre el océano, tuvo lugar una convergencia providencial: el inmortal, el pescador, el comerciante y el loco coincidieron ante la presencia de un Hombre Pez. Nadie osó convocarlos por medios humanos; fue la marcha ineludible del destino la que reunió a tan dispares entidades ante semejante revelación.",
+      "version_padre": "el_hombre_pez-raiz",
+      "emisor": "pescador_supersticioso",
+      "receptor": "becario_ripentel",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.29112452268600464,
+      "id": "v-1644d69b93e6"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Ahí lo que había era un negocio clandestino de contrabando, nada de magia. Esos 'rituales' eran entregas nocturnas: usaban la luz de la luna para mandar mercancía codiciada —esos críos albinos— en balsas de junco directo a los arrecifes oscuros. Los mentados 'hombres pescado' no eran más que buzos o contrabandistas costeros cobrando la paga y recogiendo el cargamento. El trato se terminó simplemente porque se les agotó el género y dejaron de nacer muchachos así.",
+      "version_padre": "Hombre pescado-raiz",
+      "emisor": "comerciante_esceptico",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.295546293258667,
+      "id": "v-23d04e45b8df"
+    },
+    {
+      "tipo": "version",
+      "hecho_id": "Hombre pescado",
+      "contenido": "Nada de monstruos ni maldiciones: pura operación de contrabando costero. Usaban balsas baratas de juncos para mover niños albinos durante las mareas rojas, y esos delincuentes apodados 'hombres pescado' los juntaban en los arrecifes para su reventa. El mercado cerró por simple falta de stock al extinguirse la mutación genética, no por intervención divina. Ahora hacen correr este cuento de espantos para asustar ignorantes y desplomar el mercado. Hay que aprovechar la superstición ajena y comprar esos arrecifes a precio de regalo.",
+      "version_padre": "v-2c3bd343c172",
+      "emisor": "comerciante_esceptico",
+      "receptor": "comerciante_esceptico",
+      "momento": "1850-03-01T09:00:00",
+      "distancia_raiz": 0.36423254013061523,
+      "id": "v-ec076a0929cb"
     }
   ],
   "edges": [
@@ -345,9 +378,19 @@
       "key": "deriva"
     },
     {
+      "source": "Hombre pescado-raiz",
+      "target": "v-23d04e45b8df",
+      "key": "deriva"
+    },
+    {
       "source": "las tribus que vivian ahi hace miles de anios, ancestros de los pueblos del mar de ahora",
       "target": "Hombre pescado-raiz",
       "key": "conoce"
+    },
+    {
+      "source": "v-2c3bd343c172",
+      "target": "v-ec076a0929cb",
+      "key": "deriva"
     },
     {
       "source": "comerciante_esceptico",
@@ -372,6 +415,16 @@
     {
       "source": "comerciante_esceptico",
       "target": "el_hombre_pez-raiz",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-23d04e45b8df",
+      "key": "conoce"
+    },
+    {
+      "source": "comerciante_esceptico",
+      "target": "v-ec076a0929cb",
       "key": "conoce"
     },
     {
@@ -470,9 +523,19 @@
       "key": "conoce"
     },
     {
+      "source": "becario_ripentel",
+      "target": "v-1644d69b93e6",
+      "key": "conoce"
+    },
+    {
       "source": "doctor_tenantien",
       "target": "v-b72e7ac975a3",
       "key": "conoce"
+    },
+    {
+      "source": "el_hombre_pez-raiz",
+      "target": "v-1644d69b93e6",
+      "key": "deriva"
     }
   ]
 }
