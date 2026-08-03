@@ -33,12 +33,13 @@ Tres cosas para saber antes de apretar nada:
 - **Las piedras fundacionales son intocables** por esta vía. Si al ser le tambalea
   una, el espejo solo puede DECIRLO en la reflexión — es material para futuras
   crisis biográficas, no una propuesta.
-- Cada mirada es una llamada real a Gemini, y queda en la **Bitácora** (tipo
+- Cada mirada es una lla1
+mada real a Gemini, y queda en la **Bitácora** (tipo
   `speculum`), así podés comparar intentos si después tocás el template.
 
 ---
 
-## Paso 1 — El espejo que se niega (material insuficiente)
+paso
 
 El espejo solo funciona con vida acumulada: **10 movilizaciones** como mínimo
 (usos reales de memes, no solo llevados en el loadout). Sin eso, el Taller lo dice

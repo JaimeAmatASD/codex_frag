@@ -109,6 +109,34 @@ class Mirada(BaseModel):
     propuestas: list[Propuesta] = Field(default_factory=list, max_length=MAX_PROPUESTAS)
 
 
+def _comparable(texto: str) -> str:
+    """Un texto listo para comparar: sin las comillas que el bloque de evidencia
+    le pone alrededor, sin espacios de sobra y sin distinguir mayúsculas."""
+    return texto.strip().strip("«»\"'“”").strip().casefold()
+
+
+def resolver_ids_por_texto(mirada: Mirada, ser: Ser) -> None:
+    """Traduce a id los ajustes que llegaron nombrando el meme por su TEXTO.
+
+    La trayectoria le muestra al espejo cada meme por su texto, así que devolver
+    el texto donde va el id es su error natural (pasaba con Gemini el
+    2026-07-30, y la mirada entera se perdía por eso). Si el texto no coincide
+    con ningún meme, el id queda como vino y la validación lo rechaza: acá no se
+    inventa nada."""
+    ids = {m.id for m in ser.memes}
+    por_texto = {_comparable(m.texto): m.id for m in ser.memes}
+    for p in mirada.propuestas:
+        if p.tipo != "ajustar_peso" or p.meme_id in ids:
+            continue
+        real = por_texto.get(_comparable(p.meme_id))
+        if real is not None:
+            logger.info(
+                "El espejo de %s nombró un meme por su texto; lo leo como %r.",
+                ser.ser_id, real,
+            )
+            p.meme_id = real
+
+
 def validar_contra_ser(mirada: Mirada, ser: Ser) -> None:
     """Lo que el esquema solo no puede chequear: que cada propuesta hable de
     ESTE ser. Levanta ValueError con mensaje claro (alimenta el reintento con
@@ -169,7 +197,7 @@ def consultar_trayectoria(
             else ""
         )
         lineas.append(
-            f"- «{m.texto}»{marca} — peso {m.peso_inicial:g} → {e.peso:g}; "
+            f"- «{m.texto}» [id: {m.id}]{marca} — peso {m.peso_inicial:g} → {e.peso:g}; "
             f"llevada {e.veces_en_loadout}, usada {e.veces_movilizado}{silencio}"
         )
 
@@ -232,6 +260,7 @@ def _parsear_mirada(cruda: str, ser: Ser) -> Mirada:
     if inicio == -1 or fin <= inicio:
         raise ValueError("la respuesta no contiene un bloque JSON")
     mirada = Mirada(**json.loads(cruda[inicio : fin + 1]))
+    resolver_ids_por_texto(mirada, ser)
     validar_contra_ser(mirada, ser)
     return mirada
 

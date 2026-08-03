@@ -32,8 +32,8 @@ Respondé SOLO con un JSON así, sin texto antes ni después:
 {
   "reflexion": "...",
   "propuestas": [
-    {"tipo": "ajustar_peso", "meme_id": "un_meme_tuyo", "delta": -1.0,
-     "justificacion": "..."},
+    {"tipo": "ajustar_peso", "meme_id": "copiá acá el [id: ...] del meme, no su texto",
+     "delta": -1.0, "justificacion": "..."},
     {"tipo": "proponer_experimental", "meme_id": "id_nuevo_en_minusculas",
      "texto": "...", "peso_inicial": 2.0, "costo": 10, "justificacion": "..."}
   ]

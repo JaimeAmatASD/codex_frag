@@ -23,6 +23,7 @@ from codex.speculum import (
     PropuestaAjuste,
     consultar_trayectoria,
     mirarse,
+    resolver_ids_por_texto,
     validar_contra_ser,
 )
 
@@ -97,6 +98,35 @@ def test_no_se_ajusta_un_meme_que_el_ser_no_tiene():
         validar_contra_ser(mirada, _ser())
 
 
+def test_una_propuesta_que_trae_el_texto_en_vez_del_id_se_resuelve(tmp_path=None):
+    """Bug del 2026-07-30: la trayectoria le muestra los memes por su TEXTO, así
+    que el LLM devolvía el texto donde va el id y toda la mirada se perdía. Se
+    traduce antes de validar, incluso si vino con las comillas angulares que el
+    propio bloque de evidencia le puso alrededor."""
+    ser = _ser()
+    mirada = _mirada(tipo="ajustar_peso", meme_id="«Escucho más de lo que digo.»",
+                     delta=-1.0, justificacion="la uso más de lo que admitiría")
+
+    resolver_ids_por_texto(mirada, ser)
+
+    assert mirada.propuestas[0].meme_id == "oido_fino"
+    validar_contra_ser(mirada, ser)   # y ahora valida sin levantar nada
+
+
+def test_un_texto_que_no_es_de_ningun_meme_queda_como_vino():
+    """La resolución no inventa: si no coincide con nada, el id queda igual y la
+    validación lo rechaza como antes."""
+    ser = _ser()
+    mirada = _mirada(tipo="ajustar_peso", meme_id="La valentía todo lo puede.",
+                     delta=1.0, justificacion="me gustaría tenerla")
+
+    resolver_ids_por_texto(mirada, ser)
+
+    assert mirada.propuestas[0].meme_id == "La valentía todo lo puede."
+    with pytest.raises(ValueError, match="no tiene"):
+        validar_contra_ser(mirada, ser)
+
+
 def test_un_experimental_no_puede_pisar_un_id_existente():
     mirada = _mirada(tipo="proponer_experimental", meme_id="oido_fino",
                      texto="Escucho para juzgar.", peso_inicial=2.0, costo=10,
@@ -129,6 +159,10 @@ def test_la_trayectoria_muestra_deriva_silencio_y_suma_movilizaciones():
     assert t.movilizaciones == 15   # 3 + 12 + 0: el total del ser, no por meme
     assert "peso 6 → 7.5" in t.texto                      # la deriva se ve
     assert "piedra fundacional" in t.texto
+    # El id va a la vista: es lo que el espejo tiene que devolver para proponer
+    # un ajuste, y sin verlo devolvía el texto (bug del 2026-07-30).
+    assert "oido_fino" in t.texto
+    assert "rencor_viejo" in t.texto
     # El silencio se marca solo en el meme llevado y nunca usado.
     linea_rencor = next(l for l in t.texto.splitlines() if "rencor" in l.lower() or "deuda" in l)
     assert "nunca la usaste" in linea_rencor

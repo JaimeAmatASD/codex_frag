@@ -40,7 +40,12 @@ def _cargar_ser(nombre: str) -> Ser:
 def test_dos_seres_misma_noticia_distinto_loadout(tmp_path):
     p = Persistencia(tmp_path / "mundo")
     emb = Embeddings(
-        p, encoder=lambda textos: [np.asarray(VECTORES[t], dtype=np.float32) for t in textos]
+        # Los memes que James siembre en su mesa de trabajo (SPECULUM, edición a mano)
+        # entran con un vector neutro: el test mide el motor, no congela el contenido.
+        p,
+        encoder=lambda textos: [
+            np.asarray(VECTORES.get(t, [0.5, 0.5]), dtype=np.float32) for t in textos
+        ],
     )
 
     pescador = Memetario(_cargar_ser("pescador_supersticioso"), p)
