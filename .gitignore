@@ -4,6 +4,10 @@ __pycache__/
 .pytest_cache/
 # Estado de los mundos: se genera en runtime, no se versiona.
 mundos/**/estado.db
+# La cola de momentos calientes del latido: estado vivo, no semilla. Hoy vive
+# acá y no en la carpeta del mundo, lo que rompe su portabilidad —
+# anotado en docs/MAPA_INTEGRACION_2026-08.md, sin resolver.
+taller/pendientes/
 .fastembed_cache/
 # Artefacto de build de pip install -e: se regenera solo.
 *.egg-info/
